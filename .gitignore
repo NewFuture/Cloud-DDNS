@@ -22,7 +22,7 @@ vendor/
 # Build output
 CloudDDNS
 cloud-ddns
-cloud-ddns-*
+/cloud-ddns-*
 
 # Configuration files with secrets
 config.yaml
