@@ -24,9 +24,11 @@ func StartTCP(port int) {
 
 	for {
 		conn, err := listener.Accept()
-		if err == nil {
-			go handleTCPConnection(conn)
+		if err != nil {
+			log.Printf("TCP Accept Error: %v", err)
+			continue
 		}
+		go handleTCPConnection(conn)
 	}
 }
 
@@ -40,7 +42,11 @@ func handleTCPConnection(conn net.Conn) {
 
 	// 2. 读取客户端响应 (Protocol Step: Response)
 	// 格式通常为: User:Hash:Domain:ReqC:IP
-	line, _ := bufio.NewReader(conn).ReadString('\n')
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		log.Printf("TCP Read Error: %v", err)
+		return
+	}
 	parts := strings.Split(strings.TrimSpace(line), ":")
 
 	if len(parts) < 3 {
@@ -78,10 +84,13 @@ func handleTCPConnection(conn net.Conn) {
 
 	// 4. 调用 Provider
 	p, err := provider.GetProvider(u)
-	if err == nil {
-		err = p.UpdateRecord(domain, targetIP)
+	if err != nil {
+		log.Printf("Provider Error: %v", err)
+		conn.Write([]byte("1\n"))
+		return
 	}
 
+	err = p.UpdateRecord(domain, targetIP)
 	if err != nil {
 		log.Printf("Update Error: %v", err)
 		conn.Write([]byte("1\n"))
@@ -113,7 +122,12 @@ func StartHTTP(port int) {
 			return
 		}
 
-		p, _ := provider.GetProvider(u)
+		p, err := provider.GetProvider(u)
+		if err != nil {
+			http.Error(w, "Provider error: "+err.Error(), 500)
+			return
+		}
+
 		if err := p.UpdateRecord(domain, ip); err != nil {
 			http.Error(w, err.Error(), 500)
 		} else {

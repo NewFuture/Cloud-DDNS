@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
@@ -21,7 +22,7 @@ func (p *TencentProvider) UpdateRecord(fullDomain string, ip string) error {
 	// 拆分域名
 	parts := strings.Split(fullDomain, ".")
 	if len(parts) < 2 {
-		return nil
+		return fmt.Errorf("invalid domain format: %s (expected at least 2 parts)", fullDomain)
 	}
 	domain := strings.Join(parts[len(parts)-2:], ".")
 	subDomain := strings.Join(parts[:len(parts)-2], ".")
@@ -51,7 +52,8 @@ func (p *TencentProvider) UpdateRecord(fullDomain string, ip string) error {
 	// 2. 判断是否需要更新
 	if describeResp.Response.RecordList != nil && len(describeResp.Response.RecordList) > 0 {
 		record := describeResp.Response.RecordList[0]
-		if *record.Value == ip {
+		// Check if Value is not nil before dereferencing
+		if record.Value != nil && *record.Value == ip {
 			return nil // IP 相同，无需更新
 		}
 
