@@ -56,14 +56,33 @@ func handleTCPConnection(conn net.Conn) {
 	clientHash := parts[1]
 	domain := parts[2]
 
+	// Validate domain
+	if domain == "" || len(domain) < 3 || len(domain) > 253 {
+		log.Printf("Invalid domain: %q", domain)
+		conn.Write([]byte("1\n"))
+		return
+	}
+
 	// 提取 IP，如果为空则使用 RemoteAddr
 	targetIP := ""
 	if len(parts) > 4 {
 		targetIP = parts[4]
 	}
 	if targetIP == "" || targetIP == "0.0.0.0" {
-		host, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
+		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
+			conn.Write([]byte("1\n"))
+			return
+		}
 		targetIP = host
+	}
+
+	// Validate IP address
+	if net.ParseIP(targetIP) == nil {
+		log.Printf("Invalid IP address: %q", targetIP)
+		conn.Write([]byte("1\n"))
+		return
 	}
 
 	// 3. 鉴权 (Protocol Step: Verify)
@@ -113,7 +132,26 @@ func StartHTTP(port int) {
 
 		ip := q.Get("addr")
 		if ip == "" {
-			ip, _, _ = net.SplitHostPort(r.RemoteAddr)
+			var err error
+			ip, _, err = net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
+				http.Error(w, "Invalid remote address", 400)
+				return
+			}
+		}
+
+		// Validate IP address
+		if net.ParseIP(ip) == nil {
+			log.Printf("Invalid IP address: %q", ip)
+			http.Error(w, "Invalid IP address", 400)
+			return
+		}
+
+		// Validate domain
+		if domain == "" || len(domain) < 3 || len(domain) > 253 {
+			http.Error(w, "Invalid domain", 400)
+			return
 		}
 
 		u := config.GetUser(user)

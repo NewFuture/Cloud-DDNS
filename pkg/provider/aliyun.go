@@ -34,7 +34,7 @@ func (p *AliyunProvider) UpdateRecord(fullDomain string, ip string) error {
 	config := &openapi.Config{
 		AccessKeyId:     tea.String(p.accessKey),
 		AccessKeySecret: tea.String(p.secretKey),
-		Endpoint:        tea.String("alidns.cn-hangzhou.aliyuncs.com"),
+		Endpoint:        tea.String("alidns.aliyuncs.com"),
 	}
 	client, err := alidns.NewClient(config)
 	if err != nil {

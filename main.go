@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
@@ -9,7 +11,11 @@ import (
 )
 
 func main() {
-	if err := config.LoadConfig("config.yaml"); err != nil {
+	// Allow config path to be specified via flag or environment variable
+	configPath := flag.String("config", getEnvOrDefault("CONFIG_PATH", "config.yaml"), "Path to configuration file")
+	flag.Parse()
+
+	if err := config.LoadConfig(*configPath); err != nil {
 		log.Fatalf("Config Load Error: %v", err)
 	}
 
@@ -27,4 +33,11 @@ func main() {
 	}()
 
 	wg.Wait()
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
