@@ -50,7 +50,7 @@ func (p *TencentProvider) UpdateRecord(fullDomain string, ip string) error {
 	}
 
 	// 2. 判断是否需要更新
-	if describeResp.Response.RecordList != nil && len(describeResp.Response.RecordList) > 0 {
+	if describeResp.Response != nil && describeResp.Response.RecordList != nil && len(describeResp.Response.RecordList) > 0 {
 		record := describeResp.Response.RecordList[0]
 		// Check if Value is not nil before dereferencing
 		if record.Value != nil && *record.Value == ip {

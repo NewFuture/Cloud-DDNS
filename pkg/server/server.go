@@ -136,5 +136,7 @@ func StartHTTP(port int) {
 	})
 
 	log.Printf("HTTP Server listening on :%d", port)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
+		log.Fatalf("HTTP Server Error: %v", err)
+	}
 }
