@@ -22,17 +22,35 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	errCh := make(chan error, 2)
+
 	go func() {
 		defer wg.Done()
-		server.StartTCP(config.GlobalConfig.Server.TCPPort)
+		if err := server.StartTCP(config.GlobalConfig.Server.TCPPort); err != nil {
+			errCh <- err
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		server.StartHTTP(config.GlobalConfig.Server.HTTPPort)
+		if err := server.StartHTTP(config.GlobalConfig.Server.HTTPPort); err != nil {
+			errCh <- err
+		}
 	}()
 
-	wg.Wait()
+	// Wait for either an error or both servers to finish
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case err := <-errCh:
+		log.Fatalf("Server Error: %v", err)
+	case <-done:
+		// Both servers exited cleanly
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
