@@ -2,7 +2,7 @@
 
 [![Build and Test](https://github.com/NewFuture/Cloud-DDNS/actions/workflows/build.yml/badge.svg)](https://github.com/NewFuture/Cloud-DDNS/actions/workflows/build.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/NewFuture/CloudDDNS)](https://goreportcard.com/report/github.com/NewFuture/CloudDDNS)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **Cloud-DDNS** 是一个轻量级的中间件服务，旨在连接支持 **GnuDIP** 协议的老旧网络设备（如路由器、DVR、NAS）与现代云 DNS 服务商（阿里云、腾讯云、Cloudflare 等）。它充当一个 GnuDIP 服务端，接收设备的动态 IP 更新请求，并调用云厂商 API 更新 DNS 记录。
 
@@ -155,7 +155,7 @@ make test-coverage
 
 ### 许可证
 
-MIT License
+Apache License 2.0
 
 ---
 
@@ -283,4 +283,4 @@ make test-coverage
 
 ### License
 
-MIT License
+Apache License 2.0

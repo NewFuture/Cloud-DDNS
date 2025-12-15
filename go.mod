@@ -1,6 +1,6 @@
 module github.com/NewFuture/CloudDDNS
 
-go 1.23
+go 1.25
 
 require (
 	github.com/alibabacloud-go/alidns-20150109/v4 v4.7.0
