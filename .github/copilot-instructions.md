@@ -165,8 +165,9 @@ make clean        # Remove build artifacts
 ### Docker
 ```bash
 make docker       # Build Docker image
-make docker-up    # Start with docker-compose
-make docker-down  # Stop docker-compose
+
+# Run Docker container manually
+docker run -d -p 3495:3495 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
 ```
 
 ### Manual Commands

@@ -26,7 +26,7 @@
 
 ### 快速开始
 
-#### 方式一：Docker Compose（推荐）
+#### 方式一：Docker（推荐）
 
 1. 克隆仓库：
 ```bash
@@ -40,9 +40,10 @@ cp config.yaml.example config.yaml
 # 编辑 config.yaml，填入你的云厂商凭证
 ```
 
-3. 启动服务：
+3. 构建并运行：
 ```bash
-docker-compose up -d
+docker build -t cloud-ddns:latest .
+docker run -d -p 3495:3495 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
 ```
 
 #### 方式二：二进制运行
@@ -75,6 +76,25 @@ users:
 ./cloud-ddns
 ```
 
+#### 方式三：Azure Container Apps 部署
+
+1. 创建 Azure Container App：
+```bash
+# 使用 Azure CLI
+az containerapp create \
+  --name cloud-ddns \
+  --resource-group <your-resource-group> \
+  --environment <your-environment> \
+  --image <your-registry>/cloud-ddns:latest \
+  --target-port 8080 \
+  --ingress external \
+  --secrets config-yaml=<base64-encoded-config> \
+  --env-vars CONFIG_PATH=/app/config.yaml
+```
+
+2. 配置文件可通过 Azure Key Vault 或 Container App Secrets 管理
+3. 支持自动缩放和高可用性部署
+
 ### 客户端配置
 
 在您的路由器、DVR 或 NAS 上配置 DDNS：
@@ -105,7 +125,6 @@ CloudDDNS/
 ├── main.go                 # 程序入口
 ├── config.yaml.example     # 配置文件示例
 ├── Dockerfile              # Docker 镜像构建
-├── docker-compose.yml      # Docker Compose 配置
 ├── go.mod                  # Go 模块定义
 ├── go.sum                  # 依赖版本锁定
 └── pkg/
@@ -175,7 +194,7 @@ Apache License 2.0
 
 ### Quick Start
 
-#### Method 1: Docker Compose (Recommended)
+#### Method 1: Docker (Recommended)
 
 1. Clone the repository:
 ```bash
@@ -189,9 +208,10 @@ cp config.yaml.example config.yaml
 # Edit config.yaml and fill in your cloud provider credentials
 ```
 
-3. Start the service:
+3. Build and run:
 ```bash
-docker-compose up -d
+docker build -t cloud-ddns:latest .
+docker run -d -p 3495:3495 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
 ```
 
 #### Method 2: Binary
@@ -223,6 +243,26 @@ users:
 ```bash
 ./cloud-ddns
 ```
+
+#### Method 3: Azure Container Apps Deployment
+
+1. Create Azure Container App:
+```bash
+# Using Azure CLI
+az containerapp create \
+  --name cloud-ddns \
+  --resource-group <your-resource-group> \
+  --environment <your-environment> \
+  --image <your-registry>/cloud-ddns:latest \
+  --target-port 8080 \
+  --ingress external \
+  --secrets config-yaml=<base64-encoded-config> \
+  --env-vars CONFIG_PATH=/app/config.yaml
+```
+
+2. Configuration can be managed via Azure Key Vault or Container App Secrets
+3. Supports auto-scaling and high-availability deployment
+
 
 ### Client Configuration
 

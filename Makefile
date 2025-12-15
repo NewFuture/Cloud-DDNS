@@ -1,4 +1,4 @@
-.PHONY: build run clean docker docker-up docker-down test test-verbose test-coverage fmt tidy help
+.PHONY: build run clean docker test test-verbose test-coverage fmt tidy help
 
 # Binary name
 BINARY_NAME=cloud-ddns
@@ -46,18 +46,6 @@ docker:
 	@docker build -t cloud-ddns:latest .
 	@echo "Docker image built!"
 
-# Start with Docker Compose
-docker-up:
-	@echo "Starting with Docker Compose..."
-	@docker-compose up -d
-	@echo "Service started!"
-
-# Stop Docker Compose
-docker-down:
-	@echo "Stopping Docker Compose..."
-	@docker-compose down
-	@echo "Service stopped!"
-
 # Format code
 fmt:
 	@echo "Formatting code..."
@@ -80,8 +68,6 @@ help:
 	@echo "  test-verbose   - Run tests with verbose output"
 	@echo "  test-coverage  - Run tests with coverage report"
 	@echo "  docker         - Build Docker image"
-	@echo "  docker-up      - Start with Docker Compose"
-	@echo "  docker-down    - Stop Docker Compose"
 	@echo "  fmt            - Format Go code"
 	@echo "  tidy           - Tidy Go modules"
 	@echo "  help           - Show this help message"
