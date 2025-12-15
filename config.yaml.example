@@ -1,0 +1,14 @@
+server:
+  tcp_port: 3495   # GnuDIP 标准端口
+  http_port: 8080  # HTTP 兼容端口
+
+users:
+  # 阿里云用户示例
+  - username: "LTAI4Fxxxxx"     # 填入 Aliyun AccessKey ID
+    password: "YourSecretKey"   # 填入 Aliyun AccessKey Secret
+    provider: "aliyun"
+  
+  # 腾讯云用户示例
+  - username: "123456"          # Dnspod ID
+    password: "TokenValue"      # Dnspod Token
+    provider: "tencent"

@@ -1,0 +1,126 @@
+package server
+
+import (
+	"bufio"
+	"crypto/md5"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/NewFuture/CloudDDNS/pkg/config"
+	"github.com/NewFuture/CloudDDNS/pkg/provider"
+)
+
+// StartTCP 启动 GnuDIP TCP 监听
+func StartTCP(port int) {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatalf("TCP Listen Error: %v", err)
+	}
+	log.Printf("GnuDIP TCP Server listening on :%d", port)
+
+	for {
+		conn, err := listener.Accept()
+		if err == nil {
+			go handleTCPConnection(conn)
+		}
+	}
+}
+
+func handleTCPConnection(conn net.Conn) {
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(30 * time.Second))
+
+	// 1. 发送 Salt (Protocol Step: Challenge)
+	salt := fmt.Sprintf("%d.%d", time.Now().Unix(), time.Now().UnixNano())
+	conn.Write([]byte(salt + "\n"))
+
+	// 2. 读取客户端响应 (Protocol Step: Response)
+	// 格式通常为: User:Hash:Domain:ReqC:IP
+	line, _ := bufio.NewReader(conn).ReadString('\n')
+	parts := strings.Split(strings.TrimSpace(line), ":")
+
+	if len(parts) < 3 {
+		return
+	}
+	user := parts[0]
+	clientHash := parts[1]
+	domain := parts[2]
+
+	// 提取 IP，如果为空则使用 RemoteAddr
+	targetIP := ""
+	if len(parts) > 4 {
+		targetIP = parts[4]
+	}
+	if targetIP == "" || targetIP == "0.0.0.0" {
+		host, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
+		targetIP = host
+	}
+
+	// 3. 鉴权 (Protocol Step: Verify)
+	u := config.GetUser(user)
+	if u == nil {
+		conn.Write([]byte("1\n")) // 用户未找到
+		return
+	}
+
+	// 计算预期 Hash: MD5(User + ":" + Salt + ":" + SecretKey)
+	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, u.Password)
+	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+
+	if clientHash != expectedHash {
+		conn.Write([]byte("1\n")) // 鉴权失败
+		return
+	}
+
+	// 4. 调用 Provider
+	p, err := provider.GetProvider(u)
+	if err == nil {
+		err = p.UpdateRecord(domain, targetIP)
+	}
+
+	if err != nil {
+		log.Printf("Update Error: %v", err)
+		conn.Write([]byte("1\n"))
+	} else {
+		log.Printf("Success: %s -> %s", domain, targetIP)
+		conn.Write([]byte("0\n"))
+	}
+}
+
+// StartHTTP 启动 HTTP 监听
+func StartHTTP(port int) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		user := q.Get("user")
+		pass := q.Get("pass") // HTTP 模式下直接获取 Secret
+		domain := q.Get("domn")
+		if domain == "" {
+			domain = q.Get("domain")
+		}
+
+		ip := q.Get("addr")
+		if ip == "" {
+			ip, _, _ = net.SplitHostPort(r.RemoteAddr)
+		}
+
+		u := config.GetUser(user)
+		if u == nil || u.Password != pass {
+			http.Error(w, "Auth failed", 401)
+			return
+		}
+
+		p, _ := provider.GetProvider(u)
+		if err := p.UpdateRecord(domain, ip); err != nil {
+			http.Error(w, err.Error(), 500)
+		} else {
+			w.Write([]byte("0"))
+		}
+	})
+
+	log.Printf("HTTP Server listening on :%d", port)
+	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+}

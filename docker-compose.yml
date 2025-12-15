@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  cloud-ddns:
+    build: .
+    container_name: cloud-ddns
+    restart: unless-stopped
+    ports:
+      - "3495:3495"  # GnuDIP TCP port
+      - "8080:8080"  # HTTP port
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - TZ=Asia/Shanghai
