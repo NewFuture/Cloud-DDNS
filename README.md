@@ -292,6 +292,10 @@ curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.exam
 #### Build
 
 ```bash
+# Using Makefile (recommended)
+make build
+
+# Or directly with go
 go build -o cloud-ddns main.go
 ```
 
@@ -309,11 +313,44 @@ make test-verbose
 make test-coverage
 ```
 
+#### Code Quality Checks
+
+Before committing changes:
+
+```bash
+# Check code formatting
+make fmt-check
+
+# Auto-format code
+make fmt
+
+# Run static analysis
+make vet
+
+# Full pre-commit check
+make test && make fmt-check && make vet && make build
+```
+
+#### Available Make Targets
+
+- `make build` - Build the binary
+- `make run` - Build and run the application
+- `make test` - Run tests
+- `make test-verbose` - Run tests with verbose output
+- `make test-coverage` - Run tests with coverage report
+- `make fmt` - Format Go code
+- `make fmt-check` - Check code formatting without modifying files
+- `make vet` - Run go vet
+- `make docker` - Build Docker image
+- `make clean` - Remove build artifacts
+- `make help` - Show all available targets
+
 #### Adding New Cloud Provider Support
 
 1. Create a new provider file in `pkg/provider/` (e.g., `cloudflare.go`)
 2. Implement the `UpdateRecord` method of the `Provider` interface
 3. Add the corresponding case in the `GetProvider` function in `pkg/provider/provider.go`
+4. Add tests for the new provider
 
 ### Security Notes
 

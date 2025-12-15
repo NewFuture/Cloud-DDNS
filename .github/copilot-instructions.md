@@ -158,8 +158,11 @@ make build         # Build binary
 make test          # Run all tests
 make test-verbose  # Run tests with verbose output
 make test-coverage # Generate coverage report (coverage.html)
-make run          # Build and run
-make clean        # Remove build artifacts
+make fmt           # Format code
+make fmt-check     # Check code formatting without modifying files
+make vet           # Run go vet static analysis
+make run           # Build and run
+make clean         # Remove build artifacts
 ```
 
 ### Docker
@@ -176,6 +179,22 @@ go build -o cloud-ddns main.go        # Build
 go test ./...                         # Test all packages
 go test -v ./pkg/config              # Test specific package
 go test -race -coverprofile=cov.txt  # Test with race detection
+go fmt ./...                          # Format code
+go vet ./...                          # Static analysis
+```
+
+### Pre-Commit Checklist
+
+**IMPORTANT**: Before committing any changes, always ensure:
+
+1. **Unit tests pass**: `make test`
+2. **Code is formatted**: `make fmt-check` (run `make fmt` to auto-format)
+3. **Static analysis passes**: `make vet`
+4. **Build succeeds**: `make build`
+
+Quick pre-commit check:
+```bash
+make test && make fmt-check && make vet && make build
 ```
 
 ## Testing Examples
@@ -224,6 +243,8 @@ Server logs to stdout. Capture with:
 
 **build.yml** (on push/PR):
 - Tests on Go 1.23, 1.24, 1.25
+- Checks code formatting (`gofmt`)
+- Runs go vet static analysis
 - Runs golangci-lint
 - Builds binary
 - Runs tests with race detector

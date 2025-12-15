@@ -1,4 +1,4 @@
-.PHONY: build run clean docker test test-verbose test-coverage fmt tidy help
+.PHONY: build run clean docker test test-verbose test-coverage fmt fmt-check vet tidy help
 
 # Binary name
 BINARY_NAME=cloud-ddns
@@ -52,6 +52,23 @@ fmt:
 	@go fmt ./...
 	@echo "Format complete!"
 
+# Check code formatting
+fmt-check:
+	@echo "Checking code formatting..."
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "The following files are not properly formatted:"; \
+		gofmt -l .; \
+		echo "Please run 'make fmt' to format the code"; \
+		exit 1; \
+	fi
+	@echo "All files are properly formatted!"
+
+# Run go vet
+vet:
+	@echo "Running go vet..."
+	@go vet ./...
+	@echo "Vet complete!"
+
 # Run go mod tidy
 tidy:
 	@echo "Tidying dependencies..."
@@ -69,5 +86,7 @@ help:
 	@echo "  test-coverage  - Run tests with coverage report"
 	@echo "  docker         - Build Docker image"
 	@echo "  fmt            - Format Go code"
+	@echo "  fmt-check      - Check code formatting without modifying files"
+	@echo "  vet            - Run go vet"
 	@echo "  tidy           - Tidy Go modules"
 	@echo "  help           - Show this help message"

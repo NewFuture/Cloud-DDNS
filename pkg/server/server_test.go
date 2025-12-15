@@ -98,35 +98,35 @@ func TestIPExtraction(t *testing.T) {
 
 func TestProtocolMessageParsing(t *testing.T) {
 	tests := []struct {
-		name        string
-		message     string
-		expectParts int
-		expectUser  string
-		expectHash  string
+		name         string
+		message      string
+		expectParts  int
+		expectUser   string
+		expectHash   string
 		expectDomain string
 	}{
 		{
-			name:        "Standard GnuDIP message",
-			message:     "user:hash:domain.com:0:1.2.3.4",
-			expectParts: 5,
-			expectUser:  "user",
-			expectHash:  "hash",
+			name:         "Standard GnuDIP message",
+			message:      "user:hash:domain.com:0:1.2.3.4",
+			expectParts:  5,
+			expectUser:   "user",
+			expectHash:   "hash",
 			expectDomain: "domain.com",
 		},
 		{
-			name:        "Message without IP",
-			message:     "user:hash:domain.com",
-			expectParts: 3,
-			expectUser:  "user",
-			expectHash:  "hash",
+			name:         "Message without IP",
+			message:      "user:hash:domain.com",
+			expectParts:  3,
+			expectUser:   "user",
+			expectHash:   "hash",
 			expectDomain: "domain.com",
 		},
 		{
-			name:        "Message with empty IP",
-			message:     "user:hash:domain.com:0:",
-			expectParts: 5,
-			expectUser:  "user",
-			expectHash:  "hash",
+			name:         "Message with empty IP",
+			message:      "user:hash:domain.com:0:",
+			expectParts:  5,
+			expectUser:   "user",
+			expectHash:   "hash",
 			expectDomain: "domain.com",
 		},
 	}

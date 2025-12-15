@@ -72,22 +72,73 @@ func GetProvider(u *config.UserConfig) (Provider, error) {
 
 ## Testing
 
-Currently, the project uses manual testing. To test your changes:
+Run the test suite before submitting changes:
 
-1. Create a test configuration file
-2. Run the server
-3. Test with a real device or use curl for HTTP endpoint
+```bash
+# Run all tests
+make test
 
-Example HTTP test:
+# Run tests with verbose output
+make test-verbose
+
+# Run tests with coverage report
+make test-coverage
+```
+
+All tests must pass before submitting a pull request. The test suite includes:
+- Unit tests for configuration module (100% coverage)
+- Unit tests for provider factory and domain parsing
+- Integration tests for TCP and HTTP servers
+- Protocol logic validation tests
+
+Example manual HTTP test:
 ```bash
 curl "http://localhost:8080/?user=YOUR_KEY&pass=YOUR_SECRET&domn=test.example.com&addr=1.2.3.4"
 ```
 
+## Code Quality Checks
+
+Before committing changes, ensure your code passes all quality checks:
+
+### 1. Code Formatting
+```bash
+# Check code formatting
+make fmt-check
+
+# Auto-format code
+make fmt
+```
+
+### 2. Static Analysis
+```bash
+# Run go vet
+make vet
+```
+
+### 3. Build Verification
+```bash
+# Build the binary
+make build
+```
+
+## Pre-Commit Checklist
+
+Before committing your changes, ensure:
+
+- [ ] All unit tests pass (`make test`)
+- [ ] Code is properly formatted (`make fmt-check`)
+- [ ] Code passes static analysis (`make vet`)
+- [ ] Build succeeds without errors (`make build`)
+- [ ] New features have corresponding tests
+- [ ] Documentation is updated if needed
+
 ## Code Style
 
-- Follow standard Go formatting (use `go fmt`)
-- Add comments for exported functions and types
-- Keep functions focused and single-purpose
+- Follow standard Go formatting (use `go fmt` or `make fmt`)
+- Add comments for all exported functions and types
+- Keep functions focused and single-purpose (max ~50 lines)
+- Use meaningful variable names
+- Handle errors explicitly - no silent failures
 
 ## Submitting Changes
 

@@ -39,6 +39,18 @@ jobs:
     - name: Verify dependencies
       run: go mod verify
 
+    - name: Check code formatting
+      run: |
+        if [ -n "$(gofmt -l .)" ]; then
+          echo "The following files are not properly formatted:"
+          gofmt -l .
+          echo "Please run 'go fmt ./...' to format the code"
+          exit 1
+        fi
+
+    - name: Run go vet
+      run: go vet ./...
+
     - name: Run tests
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 

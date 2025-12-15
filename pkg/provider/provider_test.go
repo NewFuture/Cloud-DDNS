@@ -121,11 +121,11 @@ func TestNewTencentProvider(t *testing.T) {
 
 func TestParseDomain(t *testing.T) {
 	tests := []struct {
-		name           string
-		input          string
-		wantBase       string
-		wantSub        string
-		wantErr        bool
+		name     string
+		input    string
+		wantBase string
+		wantSub  string
+		wantErr  bool
 	}{
 		// Standard TLD cases
 		{
