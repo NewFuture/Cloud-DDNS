@@ -1,5 +1,9 @@
 # Cloud-DDNS
 
+[![Build and Test](https://github.com/NewFuture/Cloud-DDNS/actions/workflows/build.yml/badge.svg)](https://github.com/NewFuture/Cloud-DDNS/actions/workflows/build.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/NewFuture/CloudDDNS)](https://goreportcard.com/report/github.com/NewFuture/CloudDDNS)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Cloud-DDNS** 是一个轻量级的中间件服务，旨在连接支持 **GnuDIP** 协议的老旧网络设备（如路由器、DVR、NAS）与现代云 DNS 服务商（阿里云、腾讯云、Cloudflare 等）。它充当一个 GnuDIP 服务端，接收设备的动态 IP 更新请求，并调用云厂商 API 更新 DNS 记录。
 
 [English](#english) | [中文](#中文)
@@ -129,6 +133,20 @@ go build -o cloud-ddns main.go
 2. 实现 `Provider` 接口的 `UpdateRecord` 方法
 3. 在 `pkg/provider/provider.go` 的 `GetProvider` 函数中添加对应的 case
 
+### 测试
+
+运行测试：
+```bash
+# 运行所有测试
+make test
+
+# 运行测试（详细输出）
+make test-verbose
+
+# 运行测试并生成覆盖率报告
+make test-coverage
+```
+
 ### 安全说明
 
 - **配置文件安全**：`config.yaml` 包含敏感凭证，已在 `.gitignore` 中排除
@@ -235,6 +253,20 @@ curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.exam
 
 ```bash
 go build -o cloud-ddns main.go
+```
+
+#### Testing
+
+Run tests:
+```bash
+# Run all tests
+make test
+
+# Run tests with verbose output
+make test-verbose
+
+# Run tests with coverage report
+make test-coverage
 ```
 
 #### Adding New Cloud Provider Support

@@ -1,4 +1,4 @@
-.PHONY: build run clean docker docker-up docker-down test help
+.PHONY: build run clean docker docker-up docker-down test test-verbose test-coverage fmt tidy help
 
 # Binary name
 BINARY_NAME=cloud-ddns
@@ -18,8 +18,27 @@ run: build
 clean:
 	@echo "Cleaning..."
 	@rm -f $(BINARY_NAME)
+	@rm -f coverage.txt coverage.html
 	@go clean
 	@echo "Clean complete!"
+
+# Run tests
+test:
+	@echo "Running tests..."
+	@go test ./...
+	@echo "Tests complete!"
+
+# Run tests with verbose output
+test-verbose:
+	@echo "Running tests (verbose)..."
+	@go test -v ./...
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@go tool cover -html=coverage.txt -o coverage.html
+	@echo "Coverage report generated: coverage.html"
 
 # Build Docker image
 docker:
@@ -54,12 +73,15 @@ tidy:
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build       - Build the binary"
-	@echo "  run         - Build and run the application"
-	@echo "  clean       - Remove build artifacts"
-	@echo "  docker      - Build Docker image"
-	@echo "  docker-up   - Start with Docker Compose"
-	@echo "  docker-down - Stop Docker Compose"
-	@echo "  fmt         - Format Go code"
-	@echo "  tidy        - Tidy Go modules"
-	@echo "  help        - Show this help message"
+	@echo "  build          - Build the binary"
+	@echo "  run            - Build and run the application"
+	@echo "  clean          - Remove build artifacts"
+	@echo "  test           - Run tests"
+	@echo "  test-verbose   - Run tests with verbose output"
+	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  docker         - Build Docker image"
+	@echo "  docker-up      - Start with Docker Compose"
+	@echo "  docker-down    - Stop Docker Compose"
+	@echo "  fmt            - Format Go code"
+	@echo "  tidy           - Tidy Go modules"
+	@echo "  help           - Show this help message"
