@@ -84,6 +84,10 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 }
 
 func TestGetUser(t *testing.T) {
+	// Save original config and restore after test
+	originalConfig := GlobalConfig
+	defer func() { GlobalConfig = originalConfig }()
+
 	// Setup test config
 	GlobalConfig = Config{
 		Users: []UserConfig{
@@ -121,6 +125,10 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestGetUserEmptyConfig(t *testing.T) {
+	// Save original config and restore after test
+	originalConfig := GlobalConfig
+	defer func() { GlobalConfig = originalConfig }()
+
 	GlobalConfig = Config{Users: []UserConfig{}}
 
 	user := GetUser("anyuser")

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -19,15 +18,10 @@ func NewTencentProvider(id, key string) *TencentProvider {
 }
 
 func (p *TencentProvider) UpdateRecord(fullDomain string, ip string) error {
-	// 拆分域名
-	parts := strings.Split(fullDomain, ".")
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid domain format: %s (expected at least 2 parts)", fullDomain)
-	}
-	domain := strings.Join(parts[len(parts)-2:], ".")
-	subDomain := strings.Join(parts[:len(parts)-2], ".")
-	if subDomain == "" {
-		subDomain = "@"
+	// 使用统一的域名解析函数
+	domain, subDomain, err := ParseDomain(fullDomain)
+	if err != nil {
+		return fmt.Errorf("invalid domain format: %s (%v)", fullDomain, err)
 	}
 
 	// 初始化客户端

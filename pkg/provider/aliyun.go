@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"strings"
 
 	alidns "github.com/alibabacloud-go/alidns-20150109/v4/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
@@ -19,15 +18,10 @@ func NewAliyunProvider(ak, sk string) *AliyunProvider {
 }
 
 func (p *AliyunProvider) UpdateRecord(fullDomain string, ip string) error {
-	// 简单拆分：假设最后两段为主域名 (example.com)，前面为 RR (www)
-	parts := strings.Split(fullDomain, ".")
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid domain format: %s (expected at least 2 parts)", fullDomain)
-	}
-	domainName := strings.Join(parts[len(parts)-2:], ".")
-	rr := strings.Join(parts[:len(parts)-2], ".")
-	if rr == "" {
-		rr = "@"
+	// 使用统一的域名解析函数
+	domainName, rr, err := ParseDomain(fullDomain)
+	if err != nil {
+		return fmt.Errorf("invalid domain format: %s (%v)", fullDomain, err)
 	}
 
 	// 初始化客户端
@@ -59,6 +53,7 @@ func (p *AliyunProvider) UpdateRecord(fullDomain string, ip string) error {
 			// Check if Value is not nil before dereferencing
 			if r.Value != nil && *r.Value == ip {
 				return nil // IP 相同，无需更新
+			}
 			recordId = r.RecordId
 			break
 		}
