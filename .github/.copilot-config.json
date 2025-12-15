@@ -14,7 +14,7 @@
   },
   "context": {
     "include": [
-      ".copilot/**/*.md",
+      ".github/copilot-instructions.md",
       "README.md",
       "CONTRIBUTING.md",
       "pkg/**/*.go",

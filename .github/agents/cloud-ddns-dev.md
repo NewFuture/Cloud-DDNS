@@ -27,11 +27,10 @@ description: Development agent for Cloud-DDNS project with Go 1.25 and GitHub in
 ## Project Context
 
 ### Key Files for Understanding
-1. `.copilot/project-overview.md` - Architecture and design patterns
-2. `.copilot/development-guide.md` - Development workflows
-3. `README.md` - User documentation (bilingual)
-4. `CONTRIBUTING.md` - Contribution guidelines
-5. `go.mod` - Dependencies and Go version
+1. `.github/copilot-instructions.md` - Complete project guide with architecture, patterns, and development workflows
+2. `README.md` - User documentation (bilingual)
+3. `CONTRIBUTING.md` - Contribution guidelines
+4. `go.mod` - Dependencies and Go version
 
 ### Module Structure
 - `pkg/config/` - Configuration management (YAML, user lookup)
@@ -65,7 +64,7 @@ make docker-up
 ```
 
 ### Adding Features
-1. Understand existing patterns in `.copilot/project-overview.md`
+1. Understand existing patterns in `.github/copilot-instructions.md`
 2. Follow module structure in `pkg/`
 3. Write tests alongside code
 4. Update documentation in README.md
