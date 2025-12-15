@@ -58,8 +58,7 @@ func (p *AliyunProvider) UpdateRecord(fullDomain string, ip string) error {
 		if r.RR != nil && *r.RR == rr {
 			// Check if Value is not nil before dereferencing
 			if r.Value != nil && *r.Value == ip {
-				return nil
-			} // IP 相同，无需更新
+				return nil // IP 相同，无需更新
 			recordId = r.RecordId
 			break
 		}
