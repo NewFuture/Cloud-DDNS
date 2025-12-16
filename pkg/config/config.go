@@ -34,9 +34,9 @@ func LoadConfig(path string) error {
 
 // GetUser 根据用户名查找配置
 func GetUser(username string) *UserConfig {
-	for _, u := range GlobalConfig.Users {
-		if u.Username == username {
-			return &u
+	for i := range GlobalConfig.Users {
+		if GlobalConfig.Users[i].Username == username {
+			return &GlobalConfig.Users[i]
 		}
 	}
 	return nil
