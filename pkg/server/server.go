@@ -93,6 +93,13 @@ func handleTCPConnection(conn net.Conn) {
 	}
 
 	// 计算预期 Hash: MD5(User + ":" + Salt + ":" + SecretKey)
+	/*
+	 * SECURITY WARNING:
+	 * The following code uses MD5 for password hashing as required by the legacy GnuDIP protocol specification.
+	 * MD5 is cryptographically broken and should not be used for security-sensitive operations.
+	 * DO NOT use this code without deploying it behind TLS/HTTPS to protect credentials in transit.
+	 * See the project README for more information about this security limitation and recommended mitigations.
+	 */
 	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, u.Password)
 	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
 
