@@ -38,7 +38,10 @@ func handleTCPConnection(conn net.Conn) {
 
 	// 1. 发送 Salt (Protocol Step: Challenge)
 	salt := fmt.Sprintf("%d.%d", time.Now().Unix(), time.Now().UnixNano())
-	conn.Write([]byte(salt + "\n"))
+	if _, err := conn.Write([]byte(salt + "\n")); err != nil {
+		log.Printf("TCP Write Error (salt): %v", err)
+		return
+	}
 
 	// 2. 读取客户端响应 (Protocol Step: Response)
 	// 格式通常为: User:Hash:Domain:ReqC:IP
@@ -59,7 +62,9 @@ func handleTCPConnection(conn net.Conn) {
 	// Validate domain
 	if domain == "" || len(domain) < 3 || len(domain) > 253 {
 		log.Printf("Invalid domain: %q", domain)
-		conn.Write([]byte("1\n"))
+		if _, err := conn.Write([]byte("1\n")); err != nil {
+			log.Printf("TCP Write Error (invalid domain): %v", err)
+		}
 		return
 	}
 
@@ -72,7 +77,9 @@ func handleTCPConnection(conn net.Conn) {
 		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
 			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
-			conn.Write([]byte("1\n"))
+			if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
+				log.Printf("TCP Write Error (parse remote addr): %v", writeErr)
+			}
 			return
 		}
 		targetIP = host
@@ -81,14 +88,18 @@ func handleTCPConnection(conn net.Conn) {
 	// Validate IP address
 	if net.ParseIP(targetIP) == nil {
 		log.Printf("Invalid IP address: %q", targetIP)
-		conn.Write([]byte("1\n"))
+		if _, err := conn.Write([]byte("1\n")); err != nil {
+			log.Printf("TCP Write Error (invalid IP): %v", err)
+		}
 		return
 	}
 
 	// 3. 鉴权 (Protocol Step: Verify)
 	u := config.GetUser(user)
 	if u == nil {
-		conn.Write([]byte("1\n")) // 用户未找到
+		if _, err := conn.Write([]byte("1\n")); err != nil {
+			log.Printf("TCP Write Error (user not found): %v", err)
+		}
 		return
 	}
 
@@ -104,7 +115,9 @@ func handleTCPConnection(conn net.Conn) {
 	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
 
 	if clientHash != expectedHash {
-		conn.Write([]byte("1\n")) // 鉴权失败
+		if _, err := conn.Write([]byte("1\n")); err != nil {
+			log.Printf("TCP Write Error (auth failed): %v", err)
+		}
 		return
 	}
 
@@ -112,17 +125,23 @@ func handleTCPConnection(conn net.Conn) {
 	p, err := provider.GetProvider(u)
 	if err != nil {
 		log.Printf("Provider Error: %v", err)
-		conn.Write([]byte("1\n"))
+		if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
+			log.Printf("TCP Write Error (provider error): %v", writeErr)
+		}
 		return
 	}
 
 	err = p.UpdateRecord(domain, targetIP)
 	if err != nil {
 		log.Printf("Update Error: %v", err)
-		conn.Write([]byte("1\n"))
+		if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
+			log.Printf("TCP Write Error (update failed): %v", writeErr)
+		}
 	} else {
 		log.Printf("Success: %s -> %s", domain, targetIP)
-		conn.Write([]byte("0\n"))
+		if _, writeErr := conn.Write([]byte("0\n")); writeErr != nil {
+			log.Printf("TCP Write Error (success response): %v", writeErr)
+		}
 	}
 }
 
