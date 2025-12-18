@@ -123,6 +123,20 @@ az containerapp create \
 - 密码：`password`, `pass`, `pwd`
 - IP 地址：`myip`, `ip`, `addr`
 
+**密码格式支持（自动识别）：**
+- 明文密码（推荐存储在配置文件中）
+- MD5 哈希（32位十六进制，支持大小写）
+- SHA256 哈希（64位十六进制，支持大小写）
+- Base64 编码
+
+服务器会自动尝试以下验证方式：
+1. 直接明文匹配
+2. 将配置文件密码进行 MD5/SHA256 编码后与请求密码对比
+3. 将请求密码进行 Base64 解码后与配置文件密码对比
+4. 将配置文件密码视为哈希值，对请求密码进行哈希后对比
+
+这样可以兼容不同光猫/路由器的密码传输方式。
+
 **响应格式（符合标准 GnuDIP 协议）：**
 - 成功：`good <ip>` 
 - 认证失败：`badauth`
@@ -315,6 +329,20 @@ This service is fully compatible with GnuDIP protocol implementations in Huawei,
 - Username: `username`, `user`, `usr`, `name`
 - Password: `password`, `pass`, `pwd`
 - IP Address: `myip`, `ip`, `addr`
+
+**Password Format Support (auto-detection):**
+- Plaintext (recommended for config file)
+- MD5 hash (32-character hex, case-insensitive)
+- SHA256 hash (64-character hex, case-insensitive)
+- Base64 encoding
+
+The server automatically tries multiple verification methods:
+1. Direct plaintext match
+2. Hash config password (MD5/SHA256) and compare with request
+3. Decode request password (Base64) and compare with config
+4. Treat config as hash and hash request password for comparison
+
+This ensures compatibility with various optical modem/router password transmission methods.
 
 **Response Format (standard GnuDIP protocol):**
 - Success: `good <ip>`

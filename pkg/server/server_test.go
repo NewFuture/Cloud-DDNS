@@ -438,6 +438,119 @@ func TestGetQueryParam(t *testing.T) {
 	}
 }
 
+func TestVerifyPassword(t *testing.T) {
+	tests := []struct {
+		name            string
+		storedPassword  string
+		inputPassword   string
+		expectedSuccess bool
+	}{
+		// Plaintext matching
+		{
+			name:            "plaintext exact match",
+			storedPassword:  "password123",
+			inputPassword:   "password123",
+			expectedSuccess: true,
+		},
+		{
+			name:            "plaintext mismatch",
+			storedPassword:  "password123",
+			inputPassword:   "wrongpassword",
+			expectedSuccess: false,
+		},
+		// MD5 matching - input is MD5 of stored
+		{
+			name:            "input is MD5 of stored password",
+			storedPassword:  "password123",
+			inputPassword:   "482c811da5d5b4bc6d497ffa98491e38", // MD5(password123)
+			expectedSuccess: true,
+		},
+		{
+			name:            "input is MD5 uppercase",
+			storedPassword:  "password123",
+			inputPassword:   "482C811DA5D5B4BC6D497FFA98491E38", // MD5(password123) uppercase
+			expectedSuccess: true,
+		},
+		// MD5 matching - stored is MD5, input is plaintext
+		{
+			name:            "stored is MD5, input is plaintext",
+			storedPassword:  "482c811da5d5b4bc6d497ffa98491e38", // MD5(password123)
+			inputPassword:   "password123",
+			expectedSuccess: true,
+		},
+		// SHA256 matching - input is SHA256 of stored
+		{
+			name:            "input is SHA256 of stored password",
+			storedPassword:  "password123",
+			inputPassword:   "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f", // SHA256(password123)
+			expectedSuccess: true,
+		},
+		{
+			name:            "input is SHA256 uppercase",
+			storedPassword:  "password123",
+			inputPassword:   "EF92B778BAFE771E89245B89ECBC08A44A4E166C06659911881F383D4473E94F", // SHA256(password123) uppercase
+			expectedSuccess: true,
+		},
+		// SHA256 matching - stored is SHA256, input is plaintext
+		{
+			name:            "stored is SHA256, input is plaintext",
+			storedPassword:  "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f", // SHA256(password123)
+			inputPassword:   "password123",
+			expectedSuccess: true,
+		},
+		// Base64 matching - input is Base64 of stored
+		{
+			name:            "input is Base64 of stored password",
+			storedPassword:  "password123",
+			inputPassword:   "cGFzc3dvcmQxMjM=", // Base64(password123)
+			expectedSuccess: true,
+		},
+		// Base64 matching - stored is Base64, input is plaintext
+		{
+			name:            "stored is Base64, input is plaintext",
+			storedPassword:  "cGFzc3dvcmQxMjM=", // Base64(password123)
+			inputPassword:   "password123",
+			expectedSuccess: true,
+		},
+		// Complex password tests
+		{
+			name:            "special characters plaintext",
+			storedPassword:  "P@ssw0rd!#$",
+			inputPassword:   "P@ssw0rd!#$",
+			expectedSuccess: true,
+		},
+		{
+			name:            "special characters MD5",
+			storedPassword:  "P@ssw0rd!#$",
+			inputPassword:   "f8e12466e14d9c931dca62651370657f", // MD5(P@ssw0rd!#$)
+			expectedSuccess: true,
+		},
+		// Negative tests
+		{
+			name:            "wrong MD5 hash",
+			storedPassword:  "password123",
+			inputPassword:   "0000000000000000000000000000000", // Wrong MD5
+			expectedSuccess: false,
+		},
+		{
+			name:            "wrong SHA256 hash",
+			storedPassword:  "password123",
+			inputPassword:   "0000000000000000000000000000000000000000000000000000000000000000", // Wrong SHA256
+			expectedSuccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := verifyPassword(tt.storedPassword, tt.inputPassword)
+			if result != tt.expectedSuccess {
+				t.Errorf("verifyPassword(%q, %q) = %v, want %v",
+					tt.storedPassword, tt.inputPassword, result, tt.expectedSuccess)
+			}
+		})
+	}
+}
+
 // Integration test for HTTP server handler
 func TestHTTPServerIntegration(t *testing.T) {
 	// Save original config and restore after test

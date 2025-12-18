@@ -3,6 +3,9 @@ package server
 import (
 	"bufio"
 	"crypto/md5"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
@@ -162,6 +165,64 @@ func getQueryParam(q map[string][]string, names ...string) string {
 	return ""
 }
 
+// verifyPassword 验证密码，支持多种格式：明文、MD5、SHA256、Base64
+// 尝试以下验证顺序：
+// 1. 明文匹配
+// 2. MD5(password) 匹配
+// 3. SHA256(password) 匹配
+// 4. Base64(password) 解码后匹配
+func verifyPassword(storedPassword, inputPassword string) bool {
+	// 1. 明文匹配
+	if storedPassword == inputPassword {
+		return true
+	}
+
+	// 2. 尝试 MD5 匹配 - inputPassword 是 MD5(storedPassword)
+	md5Hash := md5.Sum([]byte(storedPassword))
+	md5Str := hex.EncodeToString(md5Hash[:])
+	if strings.EqualFold(md5Str, inputPassword) {
+		return true
+	}
+
+	// 3. 尝试 SHA256 匹配 - inputPassword 是 SHA256(storedPassword)
+	sha256Hash := sha256.Sum256([]byte(storedPassword))
+	sha256Str := hex.EncodeToString(sha256Hash[:])
+	if strings.EqualFold(sha256Str, inputPassword) {
+		return true
+	}
+
+	// 4. 尝试 Base64 解码匹配 - inputPassword 是 Base64(storedPassword)
+	if decoded, err := base64.StdEncoding.DecodeString(inputPassword); err == nil {
+		if string(decoded) == storedPassword {
+			return true
+		}
+	}
+
+	// 5. 反向检查：storedPassword 可能是编码的
+	// 尝试 storedPassword 是 MD5 且 inputPassword 是明文
+	inputMd5 := md5.Sum([]byte(inputPassword))
+	inputMd5Str := hex.EncodeToString(inputMd5[:])
+	if strings.EqualFold(storedPassword, inputMd5Str) {
+		return true
+	}
+
+	// 尝试 storedPassword 是 SHA256 且 inputPassword 是明文
+	inputSha256 := sha256.Sum256([]byte(inputPassword))
+	inputSha256Str := hex.EncodeToString(inputSha256[:])
+	if strings.EqualFold(storedPassword, inputSha256Str) {
+		return true
+	}
+
+	// 尝试 storedPassword 是 Base64
+	if decoded, err := base64.StdEncoding.DecodeString(storedPassword); err == nil {
+		if string(decoded) == inputPassword {
+			return true
+		}
+	}
+
+	return false
+}
+
 // handleDDNSUpdate 处理 DDNS 更新请求（兼容光猫/路由器）
 func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -197,9 +258,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 认证
+	// 认证 - 支持多种密码格式
 	u := config.GetUser(user)
-	if u == nil || u.Password != pass {
+	if u == nil || !verifyPassword(u.Password, pass) {
 		log.Printf("Authentication failed for user: %q", user)
 		w.Write([]byte("badauth"))
 		return
