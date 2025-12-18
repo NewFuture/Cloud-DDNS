@@ -108,13 +108,37 @@ az containerapp create \
 | **密码** | 云厂商 AccessKey Secret |
 | **域名** | 完整域名，如 `camera.example.com` |
 
+#### 光猫/路由器兼容性
+
+本服务全面兼容华为、中兴等光猫及主流路由器固件的 GnuDIP 协议实现：
+
+**支持的 HTTP 路径：**
+- `/` （根路径）
+- `/update`
+- `/nic/update`
+
+**支持的参数别名（不区分大小写）：**
+- 域名：`hostname`, `host`, `domn`, `domain`
+- 用户名：`username`, `user`, `usr`, `name`
+- 密码：`password`, `pass`, `pwd`
+- IP 地址：`myip`, `ip`, `addr`
+
+**响应格式（符合标准 GnuDIP 协议）：**
+- 成功：`good <ip>` 
+- 认证失败：`badauth`
+- 域名无效：`notfqdn`
+- 系统错误：`911`
+
 #### HTTP 方式调用示例
 
 ```bash
-# 使用 URL 参数更新
+# 标准参数名（适用于大部分设备）
 curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.example.com&addr=1.2.3.4"
 
-# 省略 addr 参数时自动使用客户端 IP
+# 使用参数别名（兼容不同固件）
+curl "http://your-server:8080/nic/update?username=LTAI4Fxxxxx&password=YourSecret&hostname=camera.example.com&myip=1.2.3.4"
+
+# 省略 IP 参数时自动使用客户端 IP
 curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.example.com"
 ```
 
@@ -277,13 +301,37 @@ Configure DDNS on your router, DVR, or NAS:
 | **Password** | Cloud provider AccessKey Secret |
 | **Domain** | Full domain name, e.g., `camera.example.com` |
 
-#### HTTP Method Example
+#### Optical Modem / Router Compatibility
+
+This service is fully compatible with GnuDIP protocol implementations in Huawei, ZTE optical modems and mainstream router firmwares:
+
+**Supported HTTP Paths:**
+- `/` (root path)
+- `/update`
+- `/nic/update`
+
+**Supported Parameter Aliases (case-insensitive):**
+- Domain: `hostname`, `host`, `domn`, `domain`
+- Username: `username`, `user`, `usr`, `name`
+- Password: `password`, `pass`, `pwd`
+- IP Address: `myip`, `ip`, `addr`
+
+**Response Format (standard GnuDIP protocol):**
+- Success: `good <ip>`
+- Authentication failed: `badauth`
+- Invalid domain: `notfqdn`
+- System error: `911`
+
+#### HTTP Method Examples
 
 ```bash
-# Update with URL parameters
+# Standard parameter names (works with most devices)
 curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.example.com&addr=1.2.3.4"
 
-# Auto-detect client IP when addr is omitted
+# Using parameter aliases (compatible with different firmwares)
+curl "http://your-server:8080/nic/update?username=LTAI4Fxxxxx&password=YourSecret&hostname=camera.example.com&myip=1.2.3.4"
+
+# Auto-detect client IP when IP parameter is omitted
 curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.example.com"
 ```
 

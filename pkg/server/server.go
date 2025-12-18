@@ -145,59 +145,90 @@ func handleTCPConnection(conn net.Conn) {
 	}
 }
 
-// StartHTTP 启动 HTTP 监听
-func StartHTTP(port int) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		user := q.Get("user")
-		pass := q.Get("pass") // HTTP 模式下直接获取 Secret
-		domain := q.Get("domn")
-		if domain == "" {
-			domain = q.Get("domain")
+// getQueryParam 从查询参数中获取值，支持多个参数名别名（不区分大小写）
+func getQueryParam(q map[string][]string, names ...string) string {
+	for _, name := range names {
+		// Try exact match first
+		if val := q[name]; len(val) > 0 && val[0] != "" {
+			return val[0]
 		}
-
-		ip := q.Get("addr")
-		if ip == "" {
-			var err error
-			ip, _, err = net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
-				http.Error(w, "Invalid remote address", 400)
-				return
+		// Try case-insensitive match
+		for key, val := range q {
+			if strings.EqualFold(key, name) && len(val) > 0 && val[0] != "" {
+				return val[0]
 			}
 		}
+	}
+	return ""
+}
 
-		// Validate IP address
-		if net.ParseIP(ip) == nil {
-			log.Printf("Invalid IP address: %q", ip)
-			http.Error(w, "Invalid IP address", 400)
-			return
-		}
+// handleDDNSUpdate 处理 DDNS 更新请求（兼容光猫/路由器）
+func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
 
-		// Validate domain
-		if domain == "" || len(domain) < 3 || len(domain) > 253 {
-			http.Error(w, "Invalid domain", 400)
-			return
-		}
+	// 支持多种参数别名（兼容不同光猫固件）
+	user := getQueryParam(q, "user", "username", "usr", "name")
+	pass := getQueryParam(q, "pass", "password", "pwd")
+	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
+	ip := getQueryParam(q, "addr", "myip", "ip")
 
-		u := config.GetUser(user)
-		if u == nil || u.Password != pass {
-			http.Error(w, "Auth failed", 401)
-			return
-		}
-
-		p, err := provider.GetProvider(u)
+	// 如果未指定 IP，使用客户端 IP
+	if ip == "" {
+		var err error
+		ip, _, err = net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			http.Error(w, "Provider error: "+err.Error(), 500)
+			log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
+			w.Write([]byte("911"))
 			return
 		}
+	}
 
-		if err := p.UpdateRecord(domain, ip); err != nil {
-			http.Error(w, err.Error(), 500)
-		} else {
-			w.Write([]byte("0"))
-		}
-	})
+	// Validate IP address
+	if net.ParseIP(ip) == nil {
+		log.Printf("Invalid IP address: %q", ip)
+		w.Write([]byte("911"))
+		return
+	}
+
+	// Validate domain
+	if domain == "" || len(domain) < 3 || len(domain) > 253 {
+		log.Printf("Invalid domain: %q", domain)
+		w.Write([]byte("notfqdn"))
+		return
+	}
+
+	// 认证
+	u := config.GetUser(user)
+	if u == nil || u.Password != pass {
+		log.Printf("Authentication failed for user: %q", user)
+		w.Write([]byte("badauth"))
+		return
+	}
+
+	// 获取 Provider
+	p, err := provider.GetProvider(u)
+	if err != nil {
+		log.Printf("Provider error for user %q: %v", user, err)
+		w.Write([]byte("911"))
+		return
+	}
+
+	// 更新 DNS 记录
+	if err := p.UpdateRecord(domain, ip); err != nil {
+		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
+		w.Write([]byte("911"))
+	} else {
+		log.Printf("Successfully updated %s to %s", domain, ip)
+		w.Write([]byte("good " + ip))
+	}
+}
+
+// StartHTTP 启动 HTTP 监听
+func StartHTTP(port int) {
+	// 支持多种路径（兼容不同光猫固件）
+	http.HandleFunc("/nic/update", handleDDNSUpdate)
+	http.HandleFunc("/update", handleDDNSUpdate)
+	http.HandleFunc("/", handleDDNSUpdate)
 
 	log.Printf("HTTP Server listening on :%d", port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
