@@ -330,7 +330,9 @@ func TestTCPServerIntegration(t *testing.T) {
 		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
 
 		request := fmt.Sprintf("%s:%s:test.example.com:0:1.2.3.4\n", user, hash)
-		conn.Write([]byte(request))
+		if _, err := conn.Write([]byte(request)); err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
