@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+cloud-ddns
+CloudDDNS
+*.exe
+*.test
+*.out
+
+# Configuration (should be mounted as volume)
+config.yaml
+
+# Documentation
+*.md
+LICENSE
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+/tmp
+
+# CI/CD
+.github
