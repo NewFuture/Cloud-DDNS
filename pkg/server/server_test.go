@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"crypto/md5"
 	"fmt"
 	"net"
@@ -244,18 +245,44 @@ func TestTCPServerIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create listener: %v", err)
 	}
-	defer listener.Close()
 
 	port := listener.Addr().(*net.TCPAddr).Port
 
-	// Start server goroutine
+	// Create context for controlled shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Track server goroutine completion
+	serverDone := make(chan struct{})
+
+	// Start server goroutine with context
 	go func() {
+		defer close(serverDone)
 		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				return // Listener closed
+			select {
+			case <-ctx.Done():
+				listener.Close()
+				return
+			default:
+				conn, err := listener.Accept()
+				if err != nil {
+					return // Listener closed
+				}
+				go handleTCPConnection(conn)
 			}
-			go handleTCPConnection(conn)
+		}
+	}()
+
+	// Ensure cleanup happens before test exits
+	defer func() {
+		cancel()
+		listener.Close()
+		// Wait for server goroutine to exit with timeout
+		select {
+		case <-serverDone:
+			// Server exited cleanly
+		case <-time.After(2 * time.Second):
+			t.Log("Warning: Server goroutine did not exit within timeout")
 		}
 	}()
 
