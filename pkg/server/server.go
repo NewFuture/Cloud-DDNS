@@ -124,6 +124,10 @@ func handleTCPConnection(conn net.Conn) {
 		return
 	}
 
+	// Reset deadline before potentially slow DNS API call
+	// The initial 30s deadline is for authentication, extend it for DNS update
+	conn.SetDeadline(time.Now().Add(60 * time.Second))
+
 	// 4. 调用 Provider
 	p, err := provider.GetProvider(u)
 	if err != nil {
@@ -239,7 +243,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 		ip, _, err = net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
-			w.Write([]byte("911"))
+			if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+				log.Printf("HTTP Write Error: %v", writeErr)
+			}
 			return
 		}
 	}
@@ -247,14 +253,18 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	// Validate IP address
 	if net.ParseIP(ip) == nil {
 		log.Printf("Invalid IP address: %q", ip)
-		w.Write([]byte("911"))
+		if _, err := w.Write([]byte("911")); err != nil {
+			log.Printf("HTTP Write Error: %v", err)
+		}
 		return
 	}
 
 	// Validate domain
 	if domain == "" || len(domain) < 3 || len(domain) > 253 {
 		log.Printf("Invalid domain: %q", domain)
-		w.Write([]byte("notfqdn"))
+		if _, err := w.Write([]byte("notfqdn")); err != nil {
+			log.Printf("HTTP Write Error: %v", err)
+		}
 		return
 	}
 
@@ -262,7 +272,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	u := config.GetUser(user)
 	if u == nil || !verifyPassword(u.Password, pass) {
 		log.Printf("Authentication failed for user: %q", user)
-		w.Write([]byte("badauth"))
+		if _, err := w.Write([]byte("badauth")); err != nil {
+			log.Printf("HTTP Write Error: %v", err)
+		}
 		return
 	}
 
@@ -270,17 +282,23 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	p, err := provider.GetProvider(u)
 	if err != nil {
 		log.Printf("Provider error for user %q: %v", user, err)
-		w.Write([]byte("911"))
+		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+			log.Printf("HTTP Write Error: %v", writeErr)
+		}
 		return
 	}
 
 	// 更新 DNS 记录
 	if err := p.UpdateRecord(domain, ip); err != nil {
 		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
-		w.Write([]byte("911"))
+		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+			log.Printf("HTTP Write Error: %v", writeErr)
+		}
 	} else {
 		log.Printf("Successfully updated %s to %s", domain, ip)
-		w.Write([]byte("good " + ip))
+		if _, writeErr := w.Write([]byte("good " + ip)); writeErr != nil {
+			log.Printf("HTTP Write Error: %v", writeErr)
+		}
 	}
 }
 

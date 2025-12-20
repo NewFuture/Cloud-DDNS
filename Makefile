@@ -1,4 +1,4 @@
-.PHONY: build run clean docker test test-verbose test-coverage fmt fmt-check vet tidy help
+.PHONY: build run clean docker test test-verbose test-coverage test-race fmt fmt-check vet tidy help
 
 # Binary name
 BINARY_NAME=cloud-ddns
@@ -36,9 +36,15 @@ test-verbose:
 # Run tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 	@go tool cover -html=coverage.txt -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+# Run tests with race detector (separate from coverage due to platform limitations)
+test-race:
+	@echo "Running tests with race detector..."
+	@go test -v -race ./...
+	@echo "Race detection complete!"
 
 # Build Docker image
 docker:
@@ -84,6 +90,7 @@ help:
 	@echo "  test           - Run tests"
 	@echo "  test-verbose   - Run tests with verbose output"
 	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  test-race      - Run tests with race detector"
 	@echo "  docker         - Build Docker image"
 	@echo "  fmt            - Format Go code"
 	@echo "  fmt-check      - Check code formatting without modifying files"
