@@ -298,7 +298,7 @@ func resolveRequestIP(reqc int, providedIP string, remoteAddr string) (string, e
 		}
 		return extractRemoteIP(remoteAddr)
 	default:
-		return "", fmt.Errorf("unsupported reqc value %d (unexpected after validation)", reqc)
+		return "", fmt.Errorf("invalid reqc value %d", reqc)
 	}
 }
 
