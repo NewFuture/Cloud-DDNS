@@ -11,23 +11,25 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
 )
 
-var debugEnabled bool
+var debugEnabled atomic.Bool
 
 // SetDebug enables or disables debug logging.
 func SetDebug(enabled bool) {
-	debugEnabled = enabled
+	debugEnabled.Store(enabled)
 }
 
 func debugLogf(format string, args ...interface{}) {
-	if debugEnabled {
-		log.Printf("[DEBUG] "+format, args...)
+	if !debugEnabled.Load() {
+		return
 	}
+	log.Printf("[DEBUG] "+format, args...)
 }
 
 // StartTCP 启动 GnuDIP TCP 监听
