@@ -17,7 +17,7 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
 )
 
-// StartTCP 启动 GnuDIP TCP 监听
+// StartTCP launches the GnuDIP TCP listener
 func StartTCP(port int) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -39,15 +39,15 @@ func handleTCPConnection(conn net.Conn) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
-	// 1. 发送 Salt (Protocol Step: Challenge)
+	// 1. Send salt (Protocol Step: Challenge)
 	salt := fmt.Sprintf("%d.%d", time.Now().Unix(), time.Now().UnixNano())
 	if _, err := conn.Write([]byte(salt + "\n")); err != nil {
 		log.Printf("TCP Write Error (salt): %v", err)
 		return
 	}
 
-	// 2. 读取客户端响应 (Protocol Step: Response)
-	// 格式通常为: User:Hash:Domain:ReqC:IP
+	// 2. Read client response (Protocol Step: Response)
+	// Format: User:Hash:Domain:ReqC:IP
 	line, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		log.Printf("TCP Read Error: %v", err)
@@ -75,7 +75,7 @@ func handleTCPConnection(conn net.Conn) {
 		return
 	}
 
-	// 提取 IP，如果为空则使用 RemoteAddr
+	// Extract IP; fall back to RemoteAddr when empty
 	targetIP := ""
 	if len(parts) > 4 {
 		targetIP = parts[4]
@@ -108,7 +108,7 @@ func handleTCPConnection(conn net.Conn) {
 		return
 	}
 
-	// 3. 鉴权 (Protocol Step: Verify)
+	// 3. Authentication (Protocol Step: Verify)
 	u := config.GetUser(user)
 	if u == nil {
 		if _, err := conn.Write([]byte("1\n")); err != nil {
@@ -117,7 +117,7 @@ func handleTCPConnection(conn net.Conn) {
 		return
 	}
 
-	// 计算预期 Hash: MD5(User + ":" + Salt + ":" + SecretKey)
+	// Compute expected hash: MD5(User + ":" + Salt + ":" + SecretKey)
 	/*
 	 * SECURITY WARNING:
 	 * The following code uses MD5 for password hashing as required by the legacy GnuDIP protocol specification.
@@ -139,7 +139,7 @@ func handleTCPConnection(conn net.Conn) {
 	// The initial 30s deadline is for authentication, extend it for DNS update
 	conn.SetDeadline(time.Now().Add(60 * time.Second))
 
-	// 4. 调用 Provider
+	// 4. Call provider
 	p, err := provider.GetProvider(u)
 	if err != nil {
 		log.Printf("Provider Error: %v", err)
@@ -167,7 +167,7 @@ func handleTCPConnection(conn net.Conn) {
 	}
 }
 
-// getQueryParam 从查询参数中获取值，支持多个参数名别名（不区分大小写）
+// getQueryParam retrieves a value from query params, supporting aliases (case-insensitive)
 func getQueryParam(q map[string][]string, names ...string) string {
 	for _, name := range names {
 		// Try exact match first
@@ -184,12 +184,12 @@ func getQueryParam(q map[string][]string, names ...string) string {
 	return ""
 }
 
-// verifyPassword 验证密码，支持多种格式：明文、MD5、SHA256、Base64
-// 尝试以下验证顺序：
-// 1. 明文匹配
-// 2. MD5(password) 匹配
-// 3. SHA256(password) 匹配
-// 4. Base64(password) 解码后匹配
+// verifyPassword validates passwords across formats: plaintext, MD5, SHA256, Base64
+// Validation order:
+// 1. Plaintext match
+// 2. MD5(password) match
+// 3. SHA256(password) match
+// 4. Base64(password) decoded match
 func verifyPassword(storedPassword, inputPassword string) bool {
 	// 1. 明文匹配
 	if storedPassword == inputPassword {
