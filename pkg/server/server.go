@@ -298,7 +298,7 @@ func resolveRequestIP(reqc int, providedIP string, remoteAddr string) (string, e
 		}
 		return extractRemoteIP(remoteAddr)
 	default:
-		return "", fmt.Errorf("unsupported reqc value %d", reqc)
+		return "", fmt.Errorf("unsupported reqc value %d (unexpected after validation)", reqc)
 	}
 }
 
@@ -369,7 +369,7 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 	reqc, err := parseReqc(reqcStr)
 	if err != nil {
 		log.Printf("Invalid reqc value %q: %v", reqcStr, err)
-		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
+		sendHTTPResponse(w, numericResponse, 0, responseSystemError, "")
 		return
 	}
 
