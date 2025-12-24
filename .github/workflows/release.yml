@@ -41,8 +41,11 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG_NAME: ${{ github.ref_name }}
       run: |
-        gh release create "$TAG_NAME" cloud-ddns-* checksums.txt --generate-notes --verify-tag --latest || \
+        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
           gh release upload "$TAG_NAME" cloud-ddns-* checksums.txt --clobber
+        else
+          gh release create "$TAG_NAME" cloud-ddns-* checksums.txt --generate-notes --verify-tag --latest
+        fi
 
   docker-release:
     name: Build and Push Docker Image (amd64)
