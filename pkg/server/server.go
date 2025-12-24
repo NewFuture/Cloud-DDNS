@@ -87,7 +87,7 @@ func handleTCPConnection(conn net.Conn) {
 		targetIP = ""
 	}
 
-	if targetIP == "" || targetIP == "0.0.0.0" && reqc != "1" {
+	if (targetIP == "" || targetIP == "0.0.0.0") && reqc != "1" {
 		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
 			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
@@ -242,25 +242,25 @@ func verifyPassword(storedPassword, inputPassword string) bool {
 	return false
 }
 
-// handleDDNSUpdate 处理 DDNS 更新请求（兼容光猫/路由器）
+// handleDDNSUpdate handles DDNS update requests (compatible with modem/router firmwares)
 func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	// 支持多种参数别名（兼容不同光猫固件）
+	// Support multiple parameter aliases (case-insensitive across modem firmware)
 	user := getQueryParam(q, "user", "username", "usr", "name")
 	pass := getQueryParam(q, "pass", "password", "pwd")
 	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
 	ip := getQueryParam(q, "addr", "myip", "ip")
 	reqc := strings.TrimSpace(getQueryParam(q, "reqc"))
 
-	// 是否需要兼容标准 GnuDIP 数字响应
+	// Use numeric GnuDIP-compatible responses for standard CGI path or explicit reqc
 	gnudipCompat := strings.Contains(r.URL.Path, "gdipupdt.cgi") || reqc != ""
 
 	if reqc == "" {
 		reqc = "0"
 	}
 
-	// 如果未指定 IP，使用客户端 IP
+	// Choose IP based on reqc mode; default to client IP when unspecified
 	switch reqc {
 	case "1":
 		// offline/delete request
