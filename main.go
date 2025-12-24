@@ -13,11 +13,14 @@ import (
 func main() {
 	// Allow config path to be specified via flag or environment variable
 	configPath := flag.String("config", getEnvOrDefault("CONFIG_PATH", "config.yaml"), "Path to configuration file")
+	debug := flag.Bool("debug", false, "Enable debug logging to print full request parameters and step-by-step status")
 	flag.Parse()
 
 	if err := config.LoadConfig(*configPath); err != nil {
 		log.Fatalf("Config Load Error: %v", err)
 	}
+
+	server.SetDebug(*debug)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
