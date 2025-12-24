@@ -87,17 +87,20 @@ func handleTCPConnection(conn net.Conn) {
 		targetIP = ""
 	}
 
-	needAutoIP := (targetIP == "" || targetIP == "0.0.0.0") && reqc != "1"
-	if needAutoIP {
-		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-		if err != nil {
-			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
-			if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
-				log.Printf("TCP Write Error (parse remote addr): %v", writeErr)
+	if reqc == "1" {
+		targetIP = "0.0.0.0"
+	} else {
+		if targetIP == "" || targetIP == "0.0.0.0" {
+			host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+			if err != nil {
+				log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
+				if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
+					log.Printf("TCP Write Error (parse remote addr): %v", writeErr)
+				}
+				return
 			}
-			return
+			targetIP = host
 		}
-		targetIP = host
 	}
 
 	// Validate IP address
@@ -331,11 +334,13 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 更新 DNS 记录
+	// Update DNS record
 	if err := p.UpdateRecord(domain, ip); err != nil {
 		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
 		if gnudipCompat {
-			_, _ = w.Write([]byte("1"))
+			if _, writeErr := w.Write([]byte("1")); writeErr != nil {
+				log.Printf("HTTP Write Error: %v", writeErr)
+			}
 		} else if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
@@ -343,9 +348,13 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Successfully updated %s to %s", domain, ip)
 		if gnudipCompat {
 			if reqc == "1" {
-				_, _ = w.Write([]byte("2"))
+				if _, writeErr := w.Write([]byte("2")); writeErr != nil {
+					log.Printf("HTTP Write Error: %v", writeErr)
+				}
 			} else {
-				_, _ = w.Write([]byte("0"))
+				if _, writeErr := w.Write([]byte("0")); writeErr != nil {
+					log.Printf("HTTP Write Error: %v", writeErr)
+				}
 			}
 		} else if _, writeErr := w.Write([]byte("good " + ip)); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
@@ -353,9 +362,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// StartHTTP 启动 HTTP 监听
+// StartHTTP starts the HTTP listener
 func StartHTTP(port int) {
-	// 支持多种路径（兼容不同光猫固件）
+	// Support multiple paths for compatibility with modem/router firmware
 	http.HandleFunc("/nic/update", handleDDNSUpdate)
 	http.HandleFunc("/update", handleDDNSUpdate)
 	http.HandleFunc("/cgi-bin/gdipupdt.cgi", handleDDNSUpdate)
