@@ -118,6 +118,10 @@ az containerapp create \
 - `/nic/update`
 - `/cgi-bin/gdipupdt.cgi`
 
+**GnuDIP 标准兼容：**
+- `/cgi-bin/gdipupdt.cgi` 支持 `reqc` 模式：`0` 更新指定 IP、`1` 离线（清空记录）、`2` 使用客户端 IP
+- GnuDIP 数字响应：成功 `0`，认证/参数错误 `1`，离线成功 `2`
+
 **支持的参数别名（不区分大小写）：**
 - 域名：`hostname`, `host`, `domn`, `domain`
 - 用户名：`username`, `user`, `usr`, `name`
@@ -325,6 +329,10 @@ This service is fully compatible with GnuDIP protocol implementations in Huawei,
 - `/update`
 - `/nic/update`
 - `/cgi-bin/gdipupdt.cgi`
+
+**GnuDIP compatibility:**
+- `/cgi-bin/gdipupdt.cgi` supports `reqc` modes: `0` update with provided IP, `1` offline/remove record, `2` use client IP
+- Numeric responses per GnuDIP: success `0`, auth/parameter error `1`, offline success `2`
 
 **Supported Parameter Aliases (case-insensitive):**
 - Domain: `hostname`, `host`, `domn`, `domain`
