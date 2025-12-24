@@ -766,4 +766,21 @@ func TestHTTPServerIntegration(t *testing.T) {
 			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
 		}
 	})
+
+	t.Run("Test /cgi-bin/gdipupdt.cgi path", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&hostname=test.example.com&myip=1.2.3.4", nil)
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		// Will return "911" because provider credentials are invalid (test credentials)
+		if response != "911" && !strings.HasPrefix(response, "good ") {
+			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		}
+	})
 }

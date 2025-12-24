@@ -307,6 +307,7 @@ func StartHTTP(port int) {
 	// 支持多种路径（兼容不同光猫固件）
 	http.HandleFunc("/nic/update", handleDDNSUpdate)
 	http.HandleFunc("/update", handleDDNSUpdate)
+	http.HandleFunc("/cgi-bin/gdipupdt.cgi", handleDDNSUpdate)
 	http.HandleFunc("/", handleDDNSUpdate)
 
 	log.Printf("HTTP Server listening on :%d", port)

@@ -116,6 +116,7 @@ az containerapp create \
 - `/` （根路径）
 - `/update`
 - `/nic/update`
+- `/cgi-bin/gdipupdt.cgi`
 
 **支持的参数别名（不区分大小写）：**
 - 域名：`hostname`, `host`, `domn`, `domain`
@@ -323,6 +324,7 @@ This service is fully compatible with GnuDIP protocol implementations in Huawei,
 - `/` (root path)
 - `/update`
 - `/nic/update`
+- `/cgi-bin/gdipupdt.cgi`
 
 **Supported Parameter Aliases (case-insensitive):**
 - Domain: `hostname`, `host`, `domn`, `domain`
