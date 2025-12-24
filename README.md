@@ -116,7 +116,7 @@ az containerapp create \
 - `/` （根路径）
 - `/update`
 - `/nic/update`
-- `/cgi-bin/gdipupdt.cgi`（返回 RFC 风格的数字响应 0/1/2，支持 reqc 模式）
+- `/cgi-bin/gdipupdt.cgi`（返回数字响应 0/1/2，支持 reqc 模式）
 
 **支持的参数别名（不区分大小写）：**
 - 域名：`hostname`, `host`, `domn`, `domain`
@@ -329,7 +329,7 @@ This service is fully compatible with GnuDIP protocol implementations in Huawei,
 - `/` (root path)
 - `/update`
 - `/nic/update`
-- `/cgi-bin/gdipupdt.cgi` (returns RFC-style numeric responses 0/1/2 with reqc support)
+- `/cgi-bin/gdipupdt.cgi` (returns numeric responses 0/1/2 with reqc support)
 
 **Supported Parameter Aliases (case-insensitive):**
 - Domain: `hostname`, `host`, `domn`, `domain`

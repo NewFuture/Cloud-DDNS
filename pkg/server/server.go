@@ -93,6 +93,13 @@ func handleTCPConnection(conn net.Conn) {
 		}
 		reqc = parsedReqc
 	}
+	if reqc < 0 || reqc > 2 {
+		log.Printf("Unsupported reqc value %d", reqc)
+		if _, err := conn.Write([]byte("1\n")); err != nil {
+			log.Printf("TCP Write Error (unsupported reqc): %v", err)
+		}
+		return
+	}
 
 	// Validate domain
 	if domain == "" || len(domain) < 3 || len(domain) > 253 {
@@ -359,6 +366,11 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 			return
 		}
 		reqc = parsedReqc
+	}
+	if reqc < 0 || reqc > 2 {
+		log.Printf("Unsupported reqc value %d", reqc)
+		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
+		return
 	}
 
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
