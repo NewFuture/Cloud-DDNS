@@ -41,7 +41,12 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG_NAME: ${{ github.ref_name }}
       run: |
+        shopt -s nullglob
         RELEASE_FILES=(cloud-ddns-linux-* cloud-ddns-darwin-* cloud-ddns-windows-amd64.exe checksums.txt)
+        if [ ${#RELEASE_FILES[@]} -eq 0 ]; then
+          echo "No release files found to upload"
+          exit 1
+        fi
         if gh release view "$TAG_NAME" >/dev/null 2>&1; then
           gh release upload "$TAG_NAME" "${RELEASE_FILES[@]}" --clobber
         else
