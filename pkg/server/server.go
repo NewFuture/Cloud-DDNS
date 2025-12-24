@@ -87,7 +87,8 @@ func handleTCPConnection(conn net.Conn) {
 		targetIP = ""
 	}
 
-	if (targetIP == "" || targetIP == "0.0.0.0") && reqc != "1" {
+	needAutoIP := (targetIP == "" || targetIP == "0.0.0.0") && reqc != "1"
+	if needAutoIP {
 		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
 			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
