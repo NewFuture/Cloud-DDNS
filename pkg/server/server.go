@@ -17,6 +17,19 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
 )
 
+var debugEnabled bool
+
+// SetDebug enables or disables debug logging.
+func SetDebug(enabled bool) {
+	debugEnabled = enabled
+}
+
+func debugLogf(format string, args ...interface{}) {
+	if debugEnabled {
+		log.Printf("[DEBUG] "+format, args...)
+	}
+}
+
 // StartTCP 启动 GnuDIP TCP 监听
 func StartTCP(port int) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -31,6 +44,7 @@ func StartTCP(port int) {
 			log.Printf("TCP Accept Error: %v", err)
 			continue
 		}
+		debugLogf("Accepted TCP connection from %s", conn.RemoteAddr().String())
 		go handleTCPConnection(conn)
 	}
 }
@@ -41,6 +55,7 @@ func handleTCPConnection(conn net.Conn) {
 
 	// 1. 发送 Salt (Protocol Step: Challenge)
 	salt := fmt.Sprintf("%d.%d", time.Now().Unix(), time.Now().UnixNano())
+	debugLogf("Generated salt %s for %s", salt, conn.RemoteAddr().String())
 	if _, err := conn.Write([]byte(salt + "\n")); err != nil {
 		log.Printf("TCP Write Error (salt): %v", err)
 		return
@@ -53,9 +68,11 @@ func handleTCPConnection(conn net.Conn) {
 		log.Printf("TCP Read Error: %v", err)
 		return
 	}
+	debugLogf("Received raw TCP request: %q", line)
 	parts := strings.Split(strings.TrimSpace(line), ":")
 
 	if len(parts) < 3 {
+		debugLogf("Invalid TCP request parts length: %d", len(parts))
 		return
 	}
 	user := parts[0]
@@ -87,6 +104,7 @@ func handleTCPConnection(conn net.Conn) {
 		}
 		targetIP = host
 	}
+	debugLogf("TCP request parsed user=%s domain=%s targetIP=%s", user, domain, targetIP)
 
 	// Validate IP address
 	if net.ParseIP(targetIP) == nil {
@@ -100,6 +118,7 @@ func handleTCPConnection(conn net.Conn) {
 	// 3. 鉴权 (Protocol Step: Verify)
 	u := config.GetUser(user)
 	if u == nil {
+		debugLogf("User %q not found", user)
 		if _, err := conn.Write([]byte("1\n")); err != nil {
 			log.Printf("TCP Write Error (user not found): %v", err)
 		}
@@ -118,11 +137,13 @@ func handleTCPConnection(conn net.Conn) {
 	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
 
 	if clientHash != expectedHash {
+		debugLogf("Authentication failed for user=%s expectedHash=%s clientHash=%s", user, expectedHash, clientHash)
 		if _, err := conn.Write([]byte("1\n")); err != nil {
 			log.Printf("TCP Write Error (auth failed): %v", err)
 		}
 		return
 	}
+	debugLogf("Authentication succeeded for user=%s", user)
 
 	// Reset deadline before potentially slow DNS API call
 	// The initial 30s deadline is for authentication, extend it for DNS update
@@ -137,15 +158,18 @@ func handleTCPConnection(conn net.Conn) {
 		}
 		return
 	}
+	debugLogf("Provider initialized for user=%s provider=%s", user, u.Provider)
 
 	err = p.UpdateRecord(domain, targetIP)
 	if err != nil {
 		log.Printf("Update Error: %v", err)
+		debugLogf("DNS update failed for domain=%s ip=%s error=%v", domain, targetIP, err)
 		if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
 			log.Printf("TCP Write Error (update failed): %v", writeErr)
 		}
 	} else {
 		log.Printf("Success: %s -> %s", domain, targetIP)
+		debugLogf("DNS update succeeded for domain=%s ip=%s", domain, targetIP)
 		if _, writeErr := conn.Write([]byte("0\n")); writeErr != nil {
 			log.Printf("TCP Write Error (success response): %v", writeErr)
 		}
@@ -230,6 +254,7 @@ func verifyPassword(storedPassword, inputPassword string) bool {
 // handleDDNSUpdate 处理 DDNS 更新请求（兼容光猫/路由器）
 func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	debugLogf("HTTP request %s %s rawQuery=%q params=%v", r.Method, r.URL.Path, r.URL.RawQuery, q)
 
 	// 支持多种参数别名（兼容不同光猫固件）
 	user := getQueryParam(q, "user", "username", "usr", "name")
@@ -249,6 +274,7 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	debugLogf("HTTP parsed user=%s domain=%s ip=%s remote=%s", user, domain, ip, r.RemoteAddr)
 
 	// Validate IP address
 	if net.ParseIP(ip) == nil {
@@ -267,35 +293,42 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	debugLogf("HTTP domain validation passed for %s", domain)
 
 	// 认证 - 支持多种密码格式
 	u := config.GetUser(user)
 	if u == nil || !verifyPassword(u.Password, pass) {
 		log.Printf("Authentication failed for user: %q", user)
+		debugLogf("HTTP authentication failed for user=%s", user)
 		if _, err := w.Write([]byte("badauth")); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
 		return
 	}
+	debugLogf("HTTP authentication succeeded for user=%s", user)
 
 	// 获取 Provider
 	p, err := provider.GetProvider(u)
 	if err != nil {
 		log.Printf("Provider error for user %q: %v", user, err)
+		debugLogf("HTTP provider init failed for user=%s provider=%s error=%v", user, u.Provider, err)
 		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
 		return
 	}
+	debugLogf("HTTP provider initialized for user=%s provider=%s", user, u.Provider)
 
 	// 更新 DNS 记录
 	if err := p.UpdateRecord(domain, ip); err != nil {
 		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
+		debugLogf("HTTP DNS update failed for domain=%s ip=%s error=%v", domain, ip, err)
 		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
 	} else {
 		log.Printf("Successfully updated %s to %s", domain, ip)
+		debugLogf("HTTP DNS update succeeded for domain=%s ip=%s", domain, ip)
 		if _, writeErr := w.Write([]byte("good " + ip)); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}

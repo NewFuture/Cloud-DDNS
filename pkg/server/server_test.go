@@ -2,9 +2,11 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +36,33 @@ func TestComputeMD5Hash(t *testing.T) {
 	// Verify hash is 32 characters (MD5 hex)
 	if len(actualHash) != 32 {
 		t.Errorf("Expected hash length 32, got %d", len(actualHash))
+	}
+}
+
+func TestDebugLoggingToggle(t *testing.T) {
+	originalOutput := log.Writer()
+	originalFlags := log.Flags()
+	defer func() {
+		log.SetOutput(originalOutput)
+		log.SetFlags(originalFlags)
+		SetDebug(false)
+	}()
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+
+	SetDebug(false)
+	debugLogf("should not log")
+	if buf.Len() != 0 {
+		t.Fatalf("expected no debug output when disabled, got %q", buf.String())
+	}
+
+	buf.Reset()
+	SetDebug(true)
+	debugLogf("debug message %s", "on")
+	if !strings.Contains(buf.String(), "[DEBUG] debug message on") {
+		t.Fatalf("expected debug output when enabled, got %q", buf.String())
 	}
 }
 
