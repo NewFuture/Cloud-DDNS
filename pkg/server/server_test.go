@@ -768,7 +768,7 @@ func TestHTTPServerIntegration(t *testing.T) {
 	})
 
 	t.Run("Test /cgi-bin/gdipupdt.cgi path", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&hostname=test.example.com&myip=1.2.3.4", nil)
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&hostname=test.example.com&myip=1.2.3.4&reqc=0", nil)
 		w := httptest.NewRecorder()
 
 		handler(w, req)
@@ -778,9 +778,26 @@ func TestHTTPServerIntegration(t *testing.T) {
 		}
 
 		response := w.Body.String()
-		// Will return "911" because provider credentials are invalid (test credentials)
-		if response != "911" && !strings.HasPrefix(response, "good ") {
-			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		// GnuDIP compatibility uses numeric responses; provider credentials are invalid so we accept failure or success
+		if response != "0" && response != "1" && response != "2" {
+			t.Errorf("Expected numeric response, got '%s'", response)
+		}
+	})
+
+	t.Run("GnuDIP reqc=2 auto-detect IP", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&hostname=test.example.com&reqc=2", nil)
+		req.RemoteAddr = "10.20.30.40:12345"
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "0" && response != "1" && response != "2" {
+			t.Errorf("Expected numeric response, got '%s'", response)
 		}
 	})
 }

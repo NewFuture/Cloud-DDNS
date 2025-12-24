@@ -61,6 +61,10 @@ func handleTCPConnection(conn net.Conn) {
 	user := parts[0]
 	clientHash := parts[1]
 	domain := parts[2]
+	reqc := "0"
+	if len(parts) > 3 && parts[3] != "" {
+		reqc = parts[3]
+	}
 
 	// Validate domain
 	if domain == "" || len(domain) < 3 || len(domain) > 253 {
@@ -76,7 +80,14 @@ func handleTCPConnection(conn net.Conn) {
 	if len(parts) > 4 {
 		targetIP = parts[4]
 	}
-	if targetIP == "" || targetIP == "0.0.0.0" {
+	switch reqc {
+	case "1":
+		targetIP = "0.0.0.0"
+	case "2":
+		targetIP = ""
+	}
+
+	if targetIP == "" || targetIP == "0.0.0.0" && reqc != "1" {
 		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
 			log.Printf("Failed to parse remote address %q: %v", conn.RemoteAddr().String(), err)
@@ -146,7 +157,11 @@ func handleTCPConnection(conn net.Conn) {
 		}
 	} else {
 		log.Printf("Success: %s -> %s", domain, targetIP)
-		if _, writeErr := conn.Write([]byte("0\n")); writeErr != nil {
+		responseCode := "0\n"
+		if reqc == "1" {
+			responseCode = "2\n"
+		}
+		if _, writeErr := conn.Write([]byte(responseCode)); writeErr != nil {
 			log.Printf("TCP Write Error (success response): %v", writeErr)
 		}
 	}
@@ -236,14 +251,33 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	pass := getQueryParam(q, "pass", "password", "pwd")
 	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
 	ip := getQueryParam(q, "addr", "myip", "ip")
+	reqc := strings.TrimSpace(getQueryParam(q, "reqc"))
+
+	// 是否需要兼容标准 GnuDIP 数字响应
+	gnudipCompat := strings.Contains(r.URL.Path, "gdipupdt.cgi") || reqc != ""
+
+	if reqc == "" {
+		reqc = "0"
+	}
 
 	// 如果未指定 IP，使用客户端 IP
+	switch reqc {
+	case "1":
+		// offline/delete request
+		ip = "0.0.0.0"
+	case "2":
+		// force auto-detect
+		ip = ""
+	}
+
 	if ip == "" {
 		var err error
 		ip, _, err = net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
-			if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+			if gnudipCompat {
+				_, _ = w.Write([]byte("1"))
+			} else if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 				log.Printf("HTTP Write Error: %v", writeErr)
 			}
 			return
@@ -253,7 +287,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	// Validate IP address
 	if net.ParseIP(ip) == nil {
 		log.Printf("Invalid IP address: %q", ip)
-		if _, err := w.Write([]byte("911")); err != nil {
+		if gnudipCompat {
+			_, _ = w.Write([]byte("1"))
+		} else if _, err := w.Write([]byte("911")); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
 		return
@@ -262,7 +298,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	// Validate domain
 	if domain == "" || len(domain) < 3 || len(domain) > 253 {
 		log.Printf("Invalid domain: %q", domain)
-		if _, err := w.Write([]byte("notfqdn")); err != nil {
+		if gnudipCompat {
+			_, _ = w.Write([]byte("1"))
+		} else if _, err := w.Write([]byte("notfqdn")); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
 		return
@@ -272,7 +310,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	u := config.GetUser(user)
 	if u == nil || !verifyPassword(u.Password, pass) {
 		log.Printf("Authentication failed for user: %q", user)
-		if _, err := w.Write([]byte("badauth")); err != nil {
+		if gnudipCompat {
+			_, _ = w.Write([]byte("1"))
+		} else if _, err := w.Write([]byte("badauth")); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
 		return
@@ -282,7 +322,9 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	p, err := provider.GetProvider(u)
 	if err != nil {
 		log.Printf("Provider error for user %q: %v", user, err)
-		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+		if gnudipCompat {
+			_, _ = w.Write([]byte("1"))
+		} else if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
 		return
@@ -291,12 +333,20 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	// 更新 DNS 记录
 	if err := p.UpdateRecord(domain, ip); err != nil {
 		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
-		if _, writeErr := w.Write([]byte("911")); writeErr != nil {
+		if gnudipCompat {
+			_, _ = w.Write([]byte("1"))
+		} else if _, writeErr := w.Write([]byte("911")); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
 	} else {
 		log.Printf("Successfully updated %s to %s", domain, ip)
-		if _, writeErr := w.Write([]byte("good " + ip)); writeErr != nil {
+		if gnudipCompat {
+			if reqc == "1" {
+				_, _ = w.Write([]byte("2"))
+			} else {
+				_, _ = w.Write([]byte("0"))
+			}
+		} else if _, writeErr := w.Write([]byte("good " + ip)); writeErr != nil {
 			log.Printf("HTTP Write Error: %v", writeErr)
 		}
 	}
