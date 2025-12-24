@@ -285,10 +285,12 @@ func resolveRequestIP(reqc int, providedIP string, remoteAddr string) (string, e
 		return "0.0.0.0", nil
 	case 2: // auto-detect
 		return extractRemoteIP(remoteAddr)
-	default:
+	case 0: // update
 		if providedIP != "" && providedIP != "0.0.0.0" {
 			return providedIP, nil
 		}
+		return extractRemoteIP(remoteAddr)
+	default:
 		return extractRemoteIP(remoteAddr)
 	}
 }
