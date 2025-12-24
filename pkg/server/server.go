@@ -81,22 +81,15 @@ func handleTCPConnection(conn net.Conn) {
 	user := parts[0]
 	clientHash := parts[1]
 	domain := parts[2]
-	reqc := 0
-	if len(parts) > 3 && parts[3] != "" {
-		parsedReqc, err := strconv.Atoi(parts[3])
-		if err != nil {
-			log.Printf("Invalid reqc value %q: %v", parts[3], err)
-			if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
-				log.Printf("TCP Write Error (invalid reqc): %v", writeErr)
-			}
-			return
-		}
-		reqc = parsedReqc
+	reqcRaw := ""
+	if len(parts) > 3 {
+		reqcRaw = parts[3]
 	}
-	if reqc < 0 || reqc > 2 {
-		log.Printf("Unsupported reqc value %d", reqc)
-		if _, err := conn.Write([]byte("1\n")); err != nil {
-			log.Printf("TCP Write Error (unsupported reqc): %v", err)
+	reqc, err := parseReqc(reqcRaw)
+	if err != nil {
+		log.Printf("Invalid reqc value %q: %v", reqcRaw, err)
+		if _, writeErr := conn.Write([]byte("1\n")); writeErr != nil {
+			log.Printf("TCP Write Error (invalid reqc): %v", writeErr)
 		}
 		return
 	}
@@ -279,6 +272,20 @@ const (
 	responseSystemError
 )
 
+func parseReqc(raw string) (int, error) {
+	if raw == "" {
+		return 0, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	if value < 0 || value > 2 {
+		return 0, fmt.Errorf("unsupported reqc value %d", value)
+	}
+	return value, nil
+}
+
 func resolveRequestIP(reqc int, providedIP string, remoteAddr string) (string, error) {
 	switch reqc {
 	case 1: // offline
@@ -291,7 +298,7 @@ func resolveRequestIP(reqc int, providedIP string, remoteAddr string) (string, e
 		}
 		return extractRemoteIP(remoteAddr)
 	default:
-		return extractRemoteIP(remoteAddr)
+		return "", fmt.Errorf("unsupported reqc value %d", reqc)
 	}
 }
 
@@ -359,18 +366,9 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
 	ip := getQueryParam(q, "addr", "myip", "ip")
 	reqcStr := getQueryParam(q, "reqc")
-	reqc := 0
-	if reqcStr != "" {
-		parsedReqc, err := strconv.Atoi(reqcStr)
-		if err != nil {
-			log.Printf("Invalid reqc value %q: %v", reqcStr, err)
-			sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
-			return
-		}
-		reqc = parsedReqc
-	}
-	if reqc < 0 || reqc > 2 {
-		log.Printf("Unsupported reqc value %d", reqc)
+	reqc, err := parseReqc(reqcStr)
+	if err != nil {
+		log.Printf("Invalid reqc value %q: %v", reqcStr, err)
 		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
 		return
 	}
