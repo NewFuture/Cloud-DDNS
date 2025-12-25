@@ -175,7 +175,7 @@ func TestResolveRequestIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip, err := resolveRequestIP(tt.reqc, tt.providedIP, tt.remoteAddr)
+			ip, err := mode.ResolveRequestIP(tt.reqc, tt.providedIP, tt.remoteAddr)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("resolveRequestIP error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -357,7 +357,7 @@ func TestTCPServerIntegration(t *testing.T) {
 				if err != nil {
 					return // Listener closed
 				}
-				go handleTCPConnection(conn)
+				go mode.NewGnuTCPMode(debugLogf).Handle(conn)
 			}
 		}
 	}()
@@ -546,7 +546,7 @@ func TestGetQueryParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getQueryParam(tt.query, tt.aliases...)
+			result := mode.GetQueryParam(tt.query, tt.aliases...)
 			if result != tt.expected {
 				t.Errorf("getQueryParam() = %q, want %q", result, tt.expected)
 			}
@@ -658,7 +658,7 @@ func TestVerifyPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := verifyPassword(tt.storedPassword, tt.inputPassword)
+			result := mode.VerifyPassword(tt.storedPassword, tt.inputPassword)
 			if result != tt.expectedSuccess {
 				t.Errorf("verifyPassword(%q, %q) = %v, want %v",
 					tt.storedPassword, tt.inputPassword, result, tt.expectedSuccess)
