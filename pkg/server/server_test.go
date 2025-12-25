@@ -20,15 +20,15 @@ import (
 
 func TestComputeMD5Hash(t *testing.T) {
 	// Test MD5 hash computation used in GnuDIP protocol
-	user := "testuser"
 	salt := "12345.67890"
 	password := "testpass"
 
-	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	// Client algorithm: md5( md5(password) + "." + salt )
+	pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 	// Compute hash
-	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 	if actualHash != expectedHash {
 		t.Errorf("MD5 hash mismatch: expected %s, got %s", expectedHash, actualHash)
@@ -37,6 +37,19 @@ func TestComputeMD5Hash(t *testing.T) {
 	// Verify hash is 32 characters (MD5 hex)
 	if len(actualHash) != 32 {
 		t.Errorf("Expected hash length 32, got %d", len(actualHash))
+	}
+}
+
+func TestGnuDIPHashMatchesSampleLog(t *testing.T) {
+	password := "debug"
+	salt := "1766672054.192016939"
+	expectedClientHash := "9045b061cc3e4531c14d7b0e8200675a"
+
+	pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+	clientHash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
+
+	if clientHash != expectedClientHash {
+		t.Fatalf("expected hash %s, got %s", expectedClientHash, clientHash)
 	}
 }
 
@@ -269,9 +282,8 @@ func TestAuthenticationFlow(t *testing.T) {
 	password := "testpass"
 	salt := "1234567890.9876543210"
 
-	// Compute expected hash
-	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 	// Verify the user exists
 	userConfig := config.GetUser(user)
@@ -280,8 +292,7 @@ func TestAuthenticationFlow(t *testing.T) {
 	}
 
 	// Recompute hash to verify
-	actualStr := fmt.Sprintf("%s:%s:%s", user, salt, userConfig.Password)
-	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(actualStr)))
+	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 	if actualHash != expectedHash {
 		t.Errorf("Hash mismatch: expected %s, got %s", expectedHash, actualHash)
@@ -405,8 +416,8 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Compute hash
 		user := "testuser"
 		password := "testpass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 		// Send request - note: this will fail because we don't have real provider setup
 		// But we're testing the protocol flow
@@ -446,8 +457,8 @@ func TestTCPServerIntegration(t *testing.T) {
 		}
 		salt = strings.TrimSpace(salt)
 
-		hashStr := fmt.Sprintf("%s:%s:%s", "debug", salt, "debug")
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		pwHash := fmt.Sprintf("%x", md5.Sum([]byte("debug")))
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 		request := fmt.Sprintf("%s:%s:debug.example.com:0:1.2.3.4\n", "debug", hash)
 		if _, err := conn.Write([]byte(request)); err != nil {
 			t.Fatalf("Failed to send request: %v", err)
@@ -480,8 +491,8 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Use wrong password
 		user := "testuser"
 		wrongPassword := "wrongpass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, wrongPassword)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		pwHash := fmt.Sprintf("%x", md5.Sum([]byte(wrongPassword)))
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 		request := fmt.Sprintf("%s:%s:test.example.com:0:1.2.3.4\n", user, hash)
 		if _, err := conn.Write([]byte(request)); err != nil {
@@ -516,8 +527,8 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Use unknown user
 		user := "unknownuser"
 		password := "anypass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
 
 		request := fmt.Sprintf("%s:%s:test.example.com:0:1.2.3.4\n", user, hash)
 		if _, err := conn.Write([]byte(request)); err != nil {

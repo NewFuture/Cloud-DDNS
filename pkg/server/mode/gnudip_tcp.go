@@ -22,6 +22,11 @@ func NewGnuTCPMode(debug func(format string, args ...interface{})) *GnuTCPMode {
 	return &GnuTCPMode{debugLogf: debug}
 }
 
+func computeTCPHash(password, salt string) string {
+	pwHash := fmt.Sprintf("%x", md5.Sum([]byte(password)))
+	return fmt.Sprintf("%x", md5.Sum([]byte(pwHash+"."+salt)))
+}
+
 func (m *GnuTCPMode) Handle(conn net.Conn) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
@@ -96,8 +101,7 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 	}
 
 	if isDebugMode() && user == "debug" {
-		expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, "debug")
-		expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+		expectedHash := computeTCPHash("debug", salt)
 		if clientHash != expectedHash {
 			m.debugLogf("Debug mode authentication failed expectedHash=%s clientHash=%s", expectedHash, clientHash)
 			if _, err := conn.Write([]byte("1\n")); err != nil {
@@ -121,8 +125,7 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 		return
 	}
 
-	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, u.Password)
-	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	expectedHash := computeTCPHash(u.Password, salt)
 
 	if clientHash != expectedHash {
 		m.debugLogf("Authentication failed for user=%s expectedHash=%s clientHash=%s", user, expectedHash, clientHash)
