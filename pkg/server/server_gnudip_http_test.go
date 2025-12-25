@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/md5"
 	"fmt"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,15 +41,46 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 
 		response := w.Body.String()
-		if !strings.Contains(response, `<meta name="retc" content="0">`) || !strings.Contains(response, `<meta name="sign"`) {
-			t.Fatalf("Expected GnuDIP challenge response, got '%s'", response)
+		if !strings.Contains(response, `<meta name="salt"`) || !strings.Contains(response, `<meta name="time"`) || !strings.Contains(response, `<meta name="sign"`) {
+			t.Fatalf("Expected GnuDIP challenge response with salt/time/sign, got '%s'", response)
+		}
+		salt := getMetaContent(response, "salt")
+		if len(salt) != 10 {
+			t.Fatalf("Expected salt length 10, got %d (%q)", len(salt), salt)
 		}
 	})
 
-	t.Run("GnuDIP HTTP second step with sign", func(t *testing.T) {
+	t.Run("GnuDIP HTTP handshake on CGI path without domain", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser", nil)
+		req.RemoteAddr = "198.51.100.20:4567"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		if !strings.Contains(response, `<meta name="salt"`) || !strings.Contains(response, `<meta name="time"`) || !strings.Contains(response, `<meta name="sign"`) {
+			t.Fatalf("Expected GnuDIP challenge response, got '%s'", response)
+		}
+		salt := getMetaContent(response, "salt")
+		if len(salt) != 10 {
+			t.Fatalf("Expected salt length 10, got %d (%q)", len(salt), salt)
+		}
+		if !strings.Contains(response, `198.51.100.20`) {
+			t.Fatalf("Expected response to include client IP, got '%s'", response)
+		}
+	})
+
+	t.Run("GnuDIP HTTP second step with salt-based pass", func(t *testing.T) {
 		timeParam := "1234567890"
+		salt := "abcdefghij"
+		inner := md5.Sum([]byte("testpass"))
+		pass := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, salt))))
 		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", "testuser", timeParam, "testpass"))))
-		req := httptest.NewRequest("GET", fmt.Sprintf("/nic/update?user=testuser&domn=test.example.com&time=%s&sign=%s&addr=1.2.3.4", timeParam, sign), nil)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/nic/update?user=testuser&domn=test.example.com&time=%s&sign=%s&salt=%s&pass=%s&addr=1.2.3.4", timeParam, sign, salt, pass), nil)
 		req.RemoteAddr = "203.0.113.10:4321"
 		w := httptest.NewRecorder()
 
@@ -64,6 +96,27 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 		if response != "0" && response != "1" {
 			t.Fatalf("Expected GnuDIP numeric response, got '%s'", response)
+		}
+	})
+
+	t.Run("GnuDIP HTTP second step with salt but wrong sign fails", func(t *testing.T) {
+		timeParam := "1234567890"
+		salt := "abcdefghij"
+		inner := md5.Sum([]byte("testpass"))
+		pass := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, salt))))
+		req := httptest.NewRequest("GET", fmt.Sprintf("/nic/update?user=testuser&domn=test.example.com&time=%s&sign=deadbeef&salt=%s&pass=%s&addr=1.2.3.4", timeParam, salt, pass), nil)
+		req.RemoteAddr = "203.0.113.10:4321"
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "1" {
+			t.Fatalf("Expected auth failure numeric '1', got '%s'", response)
 		}
 	})
 
@@ -116,4 +169,19 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 			t.Fatalf("Expected numeric '0' or '1', got '%s'", response)
 		}
 	})
+
+}
+
+func getMetaContent(body, name string) string {
+	prefix := fmt.Sprintf(`<meta name="%s" content="`, name)
+	start := strings.Index(body, prefix)
+	if start == -1 {
+		return ""
+	}
+	start += len(prefix)
+	end := strings.Index(body[start:], `"`)
+	if end == -1 {
+		return ""
+	}
+	return html.UnescapeString(body[start : start+end])
 }
