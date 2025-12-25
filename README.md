@@ -46,73 +46,16 @@
 ### 快速开始
 
 #### 方式一：Docker（推荐）
-
-1. 克隆仓库：
 ```bash
-git clone https://github.com/NewFuture/CloudDDNS.git
-cd CloudDDNS
-```
-
-2. 创建配置文件：
-```bash
-cp config.yaml.example config.yaml
-# 编辑 config.yaml，填入你的云厂商凭证
-```
-
-3. 构建并运行：
-```bash
-docker build -t cloud-ddns:latest .
 docker run -d -p 3495:3495 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
 ```
 
 #### 方式二：二进制运行
 
-1. 下载编译好的二进制文件（或自行编译）：
+下载编译好的二进制文件（或自行编译）：
 ```bash
-go build -o cloud-ddns main.go
+./cloud-ddns -c config.yaml
 ```
-
-2. 创建配置文件 `config.yaml`：
-```yaml
-server:
-  tcp_port: 3495   # GnuDIP 标准端口
-  http_port: 8080  # HTTP 兼容端口
-
-users:
-  # 阿里云用户示例
-  - username: "LTAI4Fxxxxx"     # Aliyun AccessKey ID
-    password: "YourSecretKey"   # Aliyun AccessKey Secret
-    provider: "aliyun"
-  
-  # 腾讯云用户示例
-  - username: "123456"          # Dnspod ID
-    password: "TokenValue"      # Dnspod Token
-    provider: "tencent"
-```
-
-3. 运行服务：
-```bash
-./cloud-ddns
-```
-
-#### 方式三：Azure Container Apps 部署
-
-1. 创建 Azure Container App：
-```bash
-# 使用 Azure CLI
-az containerapp create \
-  --name cloud-ddns \
-  --resource-group <your-resource-group> \
-  --environment <your-environment> \
-  --image <your-registry>/cloud-ddns:latest \
-  --target-port 8080 \
-  --ingress external \
-  --secrets config-yaml=<base64-encoded-config> \
-  --env-vars CONFIG_PATH=/app/config.yaml
-```
-
-2. 配置文件可通过 Azure Key Vault 或 Container App Secrets 管理
-3. 支持自动缩放和高可用性部署
 
 ### 客户端配置
 
@@ -122,7 +65,7 @@ az containerapp create \
 |--------|-----|
 | **服务商** | GnuDIP 或 Custom |
 | **服务器地址** | 您部署 Cloud-DDNS 的服务器 IP/域名 |
-| **端口** | 3495 (TCP) 或 8080 (HTTP) |
+| **端口** | 3495 (TCP) 或 8080 (定义的HTTP） |
 | **用户名** | 云厂商 AccessKey ID |
 | **密码** | 云厂商 AccessKey Secret |
 | **域名** | 完整域名，如 `camera.example.com` |
@@ -137,12 +80,6 @@ az containerapp create \
 - `/nic/update`
 - `/cgi-bin/gdipupdt.cgi`（返回数字响应 0/1/2，支持 reqc 模式）
 
-**支持的参数别名（不区分大小写）：**
-- 域名：`hostname`, `host`, `domn`, `domain`
-- 用户名：`username`, `user`, `usr`, `name`
-- 密码：`password`, `pass`, `pwd`
-- IP 地址：`myip`, `ip`, `addr`
-
 **密码格式支持（自动识别）：**
 - 明文密码（推荐存储在配置文件中）
 - MD5 哈希（32位十六进制，支持大小写）
@@ -155,13 +92,6 @@ az containerapp create \
 3. 将请求密码进行 Base64 解码后与配置文件密码对比
 4. 将配置文件密码视为哈希值，对请求密码进行哈希后对比
 
-这样可以兼容不同光猫/路由器的密码传输方式。
-
-**响应格式（符合标准 GnuDIP 协议）：**
-- 成功：`good <ip>` 
-- 认证失败：`badauth`
-- 域名无效：`notfqdn`
-- 系统错误：`911`
 
 **Reqc 模式（GnuDIP）：**
 - `reqc=0`（默认）：按请求 IP 更新；IP 为空时使用客户端源地址
@@ -179,26 +109,6 @@ curl "http://your-server:8080/nic/update?username=LTAI4Fxxxxx&password=YourSecre
 
 # 省略 IP 参数时自动使用客户端 IP
 curl "http://your-server:8080/?user=LTAI4Fxxxxx&pass=YourSecret&domn=camera.example.com"
-```
-
-### 目录结构
-
-```
-CloudDDNS/
-├── main.go                 # 程序入口
-├── config.yaml.example     # 配置文件示例
-├── Dockerfile              # Docker 镜像构建
-├── go.mod                  # Go 模块定义
-├── go.sum                  # 依赖版本锁定
-└── pkg/
-    ├── config/             # 配置加载模块
-    │   └── config.go
-    ├── provider/           # 云厂商适配层
-    │   ├── provider.go     # 接口定义
-    │   ├── aliyun.go       # 阿里云实现
-    │   └── tencent.go      # 腾讯云实现
-    └── server/             # 协议处理层
-        └── server.go       # TCP & HTTP 服务
 ```
 
 ### 开发
@@ -224,9 +134,6 @@ make test
 
 # 运行测试（详细输出）
 make test-verbose
-
-# 运行测试并生成覆盖率报告
-make test-coverage
 ```
 
 ### 安全说明
