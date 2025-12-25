@@ -1024,7 +1024,8 @@ func TestDDNSServicePrefersBasicAuth(t *testing.T) {
 // TestNowDNSUpdateEndpoint tests the /update endpoint with Basic Auth
 // as used by Now-DNS (DtDNS) protocol:
 // curl -u <email>:<password_or_api_token> "host/update?hostname=<hostname>&myip=<ip>"
-// Response codes: good, nochg, nohost, notfqdn, badauth
+// Implemented response codes: good, badauth, notfqdn, 911
+// Note: nochg and nohost are documented by Now-DNS but map to good/notfqdn in this implementation
 func TestNowDNSUpdateEndpoint(t *testing.T) {
 	// Save original config and restore after test
 	originalConfig := config.GlobalConfig
