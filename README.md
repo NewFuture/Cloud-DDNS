@@ -37,7 +37,8 @@
 
 **常用参数别名（不区分大小写）：**
 - 用户：`user`,`username`,`usr`,`name` 或 Basic Auth
-- 密码：`pass`,`password`,`pwd`,`sign`（GnuDIP HTTP 第二步使用 `md5(user:time:secret)`）
+- 密码：`pass`,`password`,`pwd`
+- GnuDIP HTTP 签名：`sign`（用于基于挑战的签名字段，具体计算方式以服务端实现为准）
 - 域名：`hostname`,`host`,`domn`,`domain`
 - IP：`myip`,`ip`,`addr`（缺省时使用客户端源地址）
 - reqc（GnuDIP）：`0` 正常、`1` 离线(0.0.0.0)、`2` 使用源地址
