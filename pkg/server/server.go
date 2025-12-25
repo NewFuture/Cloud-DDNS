@@ -86,6 +86,12 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 		m = mode.NewGnuHTTPMode(debugLogf)
 	} else {
 		switch r.URL.Path {
+		case "/nic/update":
+			if shouldUseGnuHTTPMode(r) {
+				m = mode.NewGnuHTTPMode(debugLogf)
+			} else {
+				m = mode.NewDynMode(false, debugLogf)
+			}
 		case "/dyn/generic.php", "/dyn/tomato.php", "/dyn/ez-ipupdate.php":
 			m = mode.NewEasyDNSMode(debugLogf)
 		default:
@@ -104,6 +110,31 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 
 func handleCGIUpdate(w http.ResponseWriter, r *http.Request) {
 	handleDDNSUpdateWithMode(w, r, true)
+}
+
+// shouldUseGnuHTTPMode detects GnuDIP-style HTTP requests that should use the two-step
+// challenge/response flow instead of DynDNS handling (time/sign markers or user without password).
+func shouldUseGnuHTTPMode(r *http.Request) bool {
+	q := r.URL.Query()
+
+	hasSign := q.Get("sign") != ""
+	if q.Get("time") != "" || hasSign {
+		return true
+	}
+
+	headerUser, headerPass, basicAuthProvided := r.BasicAuth()
+	queryUser := mode.GetQueryParam(q, "user", "username")
+	queryPass := mode.GetQueryParam(q, "pass", "password", "pwd")
+
+	if basicAuthProvided && headerUser != "" && headerPass == "" && queryPass == "" && !hasSign {
+		return true
+	}
+
+	if queryUser != "" && queryPass == "" && !basicAuthProvided && !hasSign {
+		return true
+	}
+
+	return false
 }
 
 // StartHTTP starts the HTTP listener.
