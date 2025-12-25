@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +17,7 @@ var debugEnabled atomic.Bool
 // SetDebug enables or disables debug logging.
 func SetDebug(enabled bool) {
 	debugEnabled.Store(enabled)
+	mode.SetDebugMode(enabled)
 }
 
 func debugLogf(format string, args ...interface{}) {
@@ -22,6 +25,25 @@ func debugLogf(format string, args ...interface{}) {
 		return
 	}
 	log.Printf("[DEBUG] "+format, args...)
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	status int
+	body   bytes.Buffer
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(statusCode int) {
+	lrw.status = statusCode
+	lrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
+	if lrw.status == 0 {
+		lrw.status = http.StatusOK
+	}
+	lrw.body.Write(b)
+	return lrw.ResponseWriter.Write(b)
 }
 
 // StartTCP starts the GnuDIP TCP listener.
@@ -49,7 +71,14 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericResponse bool) {
-	debugLogf("HTTP request %s %s rawQuery=%q", r.Method, r.URL.Path, r.URL.RawQuery)
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		debugLogf("HTTP request body read error: %v", err)
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	debugLogf("HTTP request rawURL=%q auth=%q body=%q", r.URL.String(), r.Header.Get("Authorization"), string(bodyBytes))
+
+	lrw := &loggingResponseWriter{ResponseWriter: w, status: http.StatusOK}
 	var m mode.Mode
 	if numericResponse {
 		m = mode.NewGnuHTTPMode(debugLogf)
@@ -68,7 +97,8 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 	if outcome == mode.OutcomeSuccess {
 		outcome = m.Process(req)
 	}
-	m.Respond(w, req, outcome)
+	m.Respond(lrw, req, outcome)
+	debugLogf("HTTP response status=%d body=%q", lrw.status, lrw.body.String())
 }
 
 func handleCGIUpdate(w http.ResponseWriter, r *http.Request) {

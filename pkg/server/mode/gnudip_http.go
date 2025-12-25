@@ -58,6 +58,11 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 }
 
 func (m *GnuHTTPMode) Process(req *Request) Outcome {
+	if isDebugMode() && req.Username == "debug" && req.Password == "debug" {
+		m.debugLogf("GnuHTTP debug bypass for domain=%s ip=%s", req.Domain, req.IP)
+		return OutcomeSuccess
+	}
+
 	u := config.GetUser(req.Username)
 	if u == nil {
 		log.Printf("Authentication failed for user: %q", req.Username)

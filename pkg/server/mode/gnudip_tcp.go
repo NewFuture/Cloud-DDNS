@@ -26,7 +26,8 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
-	salt := fmt.Sprintf("%d.%d", time.Now().Unix(), time.Now().UnixNano())
+	now := time.Now()
+	salt := fmt.Sprintf("%d.%09d", now.Unix(), now.Nanosecond())
 	m.debugLogf("Generated salt %s for %s", salt, conn.RemoteAddr().String())
 	if _, err := conn.Write([]byte(salt + "\n")); err != nil {
 		log.Printf("TCP Write Error (salt): %v", err)
@@ -88,6 +89,23 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 		log.Printf("Invalid IP address: %q", targetIP)
 		if _, err := conn.Write([]byte("1\n")); err != nil {
 			log.Printf("TCP Write Error (invalid IP): %v", err)
+		}
+		return
+	}
+
+	if isDebugMode() && user == "debug" {
+		expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, "debug")
+		expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+		if clientHash != expectedHash {
+			m.debugLogf("Debug mode authentication failed expectedHash=%s clientHash=%s", expectedHash, clientHash)
+			if _, err := conn.Write([]byte("1\n")); err != nil {
+				log.Printf("TCP Write Error (debug auth failed): %v", err)
+			}
+			return
+		}
+		m.debugLogf("Debug mode bypass success for domain=%s ip=%s", domain, targetIP)
+		if _, err := conn.Write([]byte("0\n")); err != nil {
+			log.Printf("TCP Write Error (debug success): %v", err)
 		}
 		return
 	}

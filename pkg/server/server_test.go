@@ -70,11 +70,15 @@ func TestDebugLoggingToggle(t *testing.T) {
 func TestSaltGeneration(t *testing.T) {
 	// Test that salt format is correct
 	now := time.Now()
-	salt := fmt.Sprintf("%d.%d", now.Unix(), now.UnixNano())
+	salt := fmt.Sprintf("%d.%09d", now.Unix(), now.Nanosecond())
 
 	parts := strings.Split(salt, ".")
 	if len(parts) != 2 {
 		t.Errorf("Expected salt with 2 parts, got %d", len(parts))
+	}
+
+	if len(parts[1]) != 9 {
+		t.Errorf("Expected nanosecond portion to be 9 digits, got %d", len(parts[1]))
 	}
 
 	// Verify both parts are numeric
@@ -425,6 +429,40 @@ func TestTCPServerIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("Debug account bypasses provider", func(t *testing.T) {
+		defer SetDebug(false)
+		SetDebug(true)
+
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			t.Fatalf("Failed to connect: %v", err)
+		}
+		defer conn.Close()
+
+		reader := bufio.NewReader(conn)
+		salt, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatalf("Failed to read salt: %v", err)
+		}
+		salt = strings.TrimSpace(salt)
+
+		hashStr := fmt.Sprintf("%s:%s:%s", "debug", salt, "debug")
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		request := fmt.Sprintf("%s:%s:debug.example.com:0:1.2.3.4\n", "debug", hash)
+		if _, err := conn.Write([]byte(request)); err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatalf("Failed to read response: %v", err)
+		}
+		response = strings.TrimSpace(response)
+		if response != "0" {
+			t.Errorf("Expected debug bypass success '0', got '%s'", response)
+		}
+	})
+
 	t.Run("Failed authentication - wrong password", func(t *testing.T) {
 		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err != nil {
@@ -754,6 +792,23 @@ func TestHTTPServerIntegration(t *testing.T) {
 		// Will return "911" because provider credentials are invalid (test credentials)
 		if response != "911" && !strings.HasPrefix(response, "good ") {
 			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		}
+	})
+
+	t.Run("Debug bypass succeeds without configured user", func(t *testing.T) {
+		defer SetDebug(false)
+		SetDebug(true)
+		req := httptest.NewRequest("GET", "/?user=debug&pass=debug&domn=test.example.com&addr=1.2.3.4", nil)
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+		response := strings.TrimSpace(w.Body.String())
+		if response != "good 1.2.3.4" && response != "good" {
+			t.Errorf("Expected debug bypass to return success, got '%s'", response)
 		}
 	})
 
