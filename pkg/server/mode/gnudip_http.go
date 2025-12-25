@@ -4,7 +4,9 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"fmt"
+	"html"
 	"log"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -129,14 +131,14 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 			}
 			return
 		}
-		salt := generateSalt(10)
+		salt := generateSalt(16)
 		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
 		body := fmt.Sprintf(`<html><head>
 <meta name="salt" content="%s">
 <meta name="time" content="%d">
 <meta name="sign" content="%s">
 <meta name="addr" content="%s">
-</head><body></body></html>`, salt, now, sign, req.IP)
+</head><body></body></html>`, html.EscapeString(salt), now, html.EscapeString(sign), html.EscapeString(req.IP))
 		if _, err := w.Write([]byte(body)); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
@@ -167,12 +169,14 @@ func generateSalt(length int) string {
 		return ""
 	}
 	buf := make([]byte, length)
-	if _, err := rand.Read(buf); err != nil {
-		log.Printf("crypto/rand failed generating salt: %v", err)
-		return ""
-	}
-	for i, b := range buf {
-		buf[i] = charset[int(b)%len(charset)]
+	max := big.NewInt(int64(len(charset)))
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			log.Printf("crypto/rand failed generating salt: %v", err)
+			return ""
+		}
+		buf[i] = charset[n.Int64()]
 	}
 	return string(buf)
 }
