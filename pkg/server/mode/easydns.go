@@ -5,7 +5,10 @@ import (
 	"net/http"
 )
 
-// EasyDNSMode uses DynMode behavior but kept as an explicit mode for clarity.
+// EasyDNSMode is intentionally kept as a distinct type even though it embeds
+// DynMode. This preserves a clear separation between the EasyDNS protocol
+// surface and the generic DynDNS behavior, and allows EasyDNS-specific
+// behavior or response mapping to evolve independently of DynMode.
 type EasyDNSMode struct {
 	*DynMode
 }
@@ -17,7 +20,7 @@ func NewEasyDNSMode(debug func(format string, args ...interface{})) Mode {
 // Respond writes EasyDNS dynamic DNS result codes as plain-text responses.
 // It implements the EasyDNS API contract by mapping internal outcomes to
 // EasyDNS result strings:
-//   - OutcomeSuccess       -> "NOERROR"
+//   - OutcomeSuccess       -> "OK"
 //   - OutcomeAuthFailure   -> "NOACCESS"
 //   - OutcomeInvalidDomain -> "ILLEGAL INPUT"
 //   - OutcomeSystemError   -> "NOSERVICE"
@@ -28,7 +31,7 @@ func (m *EasyDNSMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 	var body string
 	switch outcome {
 	case OutcomeSuccess:
-		body = "NOERROR"
+		body = "OK"
 	case OutcomeAuthFailure:
 		body = "NOACCESS"
 	case OutcomeInvalidDomain:
