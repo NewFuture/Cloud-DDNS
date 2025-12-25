@@ -30,6 +30,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	pass := GetQueryParam(q, "pass", "password", "pwd", "sign")
 	timeParam := GetQueryParam(q, "time")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
+	isHandshake := pass == ""
 
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
@@ -48,17 +49,16 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Time:       timeParam,
 	}
 
-	if pass == "" {
-		m.debugLogf("GnuHTTP handshake prepare user=%s domain=%s ip=%s time=%s remote=%s", user, domain, resolvedIP, timeParam, r.RemoteAddr)
-		return req, OutcomeSuccess
-	}
-
-	if domain == "" || len(domain) < 3 || len(domain) > 253 {
+	if !isHandshake && (domain == "" || len(domain) < 3 || len(domain) > 253) {
 		log.Printf("Invalid domain: %q", domain)
 		return req, OutcomeInvalidDomain
 	}
 
-	m.debugLogf("GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s", user, domain, resolvedIP, timeParam, r.RemoteAddr)
+	logMsg := "GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s"
+	if isHandshake {
+		logMsg = "GnuHTTP handshake prepare user=%s domain=%s ip=%s time=%s remote=%s"
+	}
+	m.debugLogf(logMsg, user, domain, resolvedIP, timeParam, r.RemoteAddr)
 	return req, OutcomeSuccess
 }
 
