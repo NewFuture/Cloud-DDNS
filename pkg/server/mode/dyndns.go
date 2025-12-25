@@ -20,7 +20,7 @@ func (m *DynMode) Prepare(r *http.Request) (*Request, Outcome) {
 	username := preferValue(headerUser, queryUser)
 	password := preferValue(headerPass, queryPass)
 
-	domain := getQueryParam(q, "domn", "domain", "hostname", "host", "id", "host_id") // id for DtDNS, host_id for EasyDNS
+	domain := getQueryParam(q, "domn", "domain", "hostname", "host", "id", "host_id") // domn/domain/hostname/host standard, id for DtDNS, host_id for EasyDNS
 	ip := getQueryParam(q, "addr", "myip", "ip")
 	reqcStr := getQueryParam(q, "reqc")
 	reqc, err := parseReqc(reqcStr)
