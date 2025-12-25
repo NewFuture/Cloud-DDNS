@@ -28,14 +28,16 @@ func NewGnuHTTPMode(debug func(format string, args ...interface{})) Mode {
 func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	q := r.URL.Query()
 
-	user := GetQueryParam(q, "user", "username")
+	headerUser, headerPass, _ := r.BasicAuth()
+
+	user := preferValue(headerUser, GetQueryParam(q, "user", "username"))
 	domain := GetQueryParam(q, "domn", "domain", "hostname", "host")
-	pass := GetQueryParam(q, "pass", "password", "pwd")
+	pass := preferValue(headerPass, GetQueryParam(q, "pass", "password", "pwd"))
 	sign := GetQueryParam(q, "sign")
 	timeParam := GetQueryParam(q, "time")
 	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
-	authPresent := q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
+	authPresent := headerPass != "" || q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
 	isHandshake := !authPresent && user != ""
 
 	reqc := 0

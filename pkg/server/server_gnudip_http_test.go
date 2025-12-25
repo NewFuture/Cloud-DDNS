@@ -74,6 +74,27 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 	})
 
+	t.Run("GnuDIP HTTP handshake on CGI path with BasicAuth only", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi", nil)
+		req.SetBasicAuth("testuser", "")
+		req.RemoteAddr = "203.0.113.50:7890"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		if !strings.Contains(response, `<meta name="salt"`) || !strings.Contains(response, `<meta name="time"`) || !strings.Contains(response, `<meta name="sign"`) {
+			t.Fatalf("Expected GnuDIP challenge response, got '%s'", response)
+		}
+		if !strings.Contains(response, `203.0.113.50`) {
+			t.Fatalf("Expected response to include client IP, got '%s'", response)
+		}
+	})
+
 	t.Run("GnuDIP HTTP second step with salt-based pass", func(t *testing.T) {
 		timeParam := "1234567890"
 		salt := "abcdefghij"
