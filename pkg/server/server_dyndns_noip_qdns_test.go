@@ -27,11 +27,8 @@ func TestDynDNSEndpoint(t *testing.T) {
 	}
 
 	resp := strings.TrimSpace(w.Body.String())
-	if !strings.HasPrefix(resp, "good") {
-		t.Fatalf("Expected DynDNS success response starting with 'good', got %q", resp)
-	}
-	if strings.HasPrefix(resp, "good ") && !strings.Contains(resp, "1.2.3.4") {
-		t.Fatalf("Expected response to include provided IP, got %q", resp)
+	if resp != "good 1.2.3.4" && resp != "good" {
+		t.Fatalf("Expected DynDNS success response 'good 1.2.3.4' or 'good', got %q", resp)
 	}
 }
 
@@ -53,11 +50,8 @@ func TestQDNSEndpoint(t *testing.T) {
 	}
 
 	resp := strings.TrimSpace(w.Body.String())
-	if !strings.HasPrefix(resp, "good") {
-		t.Fatalf("Expected qDNS success response starting with 'good', got %q", resp)
-	}
-	if strings.HasPrefix(resp, "good ") && !strings.Contains(resp, "198.51.100.10") {
-		t.Fatalf("Expected qDNS response to include remote IP, got %q", resp)
+	if resp != "good 198.51.100.10" && resp != "good" {
+		t.Fatalf("Expected qDNS success response with remote IP or generic good, got %q", resp)
 	}
 }
 
