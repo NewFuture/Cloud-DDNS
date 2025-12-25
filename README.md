@@ -23,20 +23,23 @@
   - 可扩展支持更多厂商
 - ✅ **智能更新**：IP 未变化时不调用 API，节省成本
 - ✅ **Docker 支持**：提供 Docker 镜像，快速部署
+### 支持的 DDNS 协议 / 服务商
 
-### 工作原理（用户视角）
+- **DynDNS / NIC Update / EasyDNS / Oray / DtDNS**：`/`, `/update`, `/nic/update`（参数同 DynDNS，Basic Auth 或 URL 参数）
+- **GnuDIP HTTP**：`/cgi-bin/gdipupdt.cgi`，两步认证（首请求返回 meta retc/time/sign，二次校验 `md5(user:time:secret)`，返回数字 0/1/2）
+- **GnuDIP TCP**：标准 3495 端口，MD5 challenge-response
 
-1. 客户端（路由器/光猫/NVR）通过 **Basic Auth** 或 URL 参数提交更新请求（HTTP `/`, `/update`, `/nic/update`, `/cgi-bin/gdipupdt.cgi`，或 GnuDIP TCP 3495）。
-2. 前端 `DDNSService` 统一解析参数：提取凭证、域名、`reqc` 模式，若未提供 IP 则使用请求源地址，校验域名/IP 合法性。
-3. 通过配置匹配云厂商 Provider，执行 DNS 记录更新并按协议返回标准响应码。
+**常用参数别名（不区分大小写）：**
+- 用户：`user`,`username`,`usr`,`name` 或 Basic Auth
+- 密码：`pass`,`password`,`pwd`,`sign`（GnuDIP HTTP 第二步使用 `md5(user:time:secret)`）
+- 域名：`hostname`,`host`,`domn`,`domain`
+- IP：`myip`,`ip`,`addr`（缺省时使用客户端源地址）
+- reqc（GnuDIP）：`0` 正常、`1` 离线(0.0.0.0)、`2` 使用源地址
 
-```
-Client (BasicAuth / URL 参数)
-    └─ HTTP/TCP Frontend
-         └─ DDNSService: 认证 + IP 判定 + reqc 处理
-              └─ Provider (Aliyun / Tencent / ...)
-                   └─ Cloud DNS 记录更新
-```
+**响应格式概览：**
+- DynDNS/EasyDNS/DtDNS/Oray：`good <ip>` / `nochg <ip>` / `badauth` / `notfqdn` / `911`
+- GnuDIP HTTP：数字 `0/1/2`；首请求无 pass 返回 meta
+- GnuDIP TCP：数字 `0/1/2`
 
 ### 快速开始
 
