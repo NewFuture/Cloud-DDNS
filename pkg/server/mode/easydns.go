@@ -5,6 +5,10 @@ import (
 	"net/http"
 )
 
+// EasyDNSMode is intentionally kept as a distinct type even though it embeds
+// DynMode. This preserves a clear separation between the EasyDNS protocol
+// surface and the generic DynDNS behavior, and allows EasyDNS-specific
+// behavior or response mapping to evolve independently of DynMode.
 type EasyDNSMode struct {
 	*DynMode
 }
