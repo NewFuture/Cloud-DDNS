@@ -72,6 +72,11 @@ func StartHTTP(port int) {
 	// Support multiple paths (compatible with various firmware clients).
 	http.HandleFunc("/nic/update", handleDDNSUpdate)
 	http.HandleFunc("/update", handleDDNSUpdate)
+	http.HandleFunc("/dyndns/update", handleDDNSUpdate)   // 3322/qDNS
+	http.HandleFunc("/ph/update", handleDDNSUpdate)       // Oray
+	http.HandleFunc("/dyn/generic.php", handleDDNSUpdate) // easyDNS
+	http.HandleFunc("/dyn/tomato.php", handleDDNSUpdate)  // easyDNS
+	http.HandleFunc("/api/autodns.cfm", handleDDNSUpdate) // DtDNS
 	http.HandleFunc("/cgi-bin/gdipupdt.cgi", handleCGIUpdate)
 	http.HandleFunc("/", handleDDNSUpdate)
 

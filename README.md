@@ -32,8 +32,8 @@
 | 协议类 | API 路径/端口 | 认证 | 请求参数（名称=含义） | Response（典型） | 支持服务商 |
 |---|---|---|---|---|---|
 | DynDNS（DynDNS2 / NIC Update 族） | `/nic/update`（常见）；Oray 变体 `/ph/update`；3322 变体 `/dyndns/update` | HTTP Basic Auth 或 URL 内嵌 `user:pass` | `hostname`=FQDN（部分支持逗号多值）；`myip`=要设置 IP（可省略用源地址）；（3322 常见：`system`=更新系统类型） | `good <ip>` / `nochg <ip>` / `badauth` / `nohost` / `badagent` / `dnserr` / `911`（服务商略有差异） | DynDNS、No‑IP、DNS‑O‑Matic、Oray、3322(qDNS) |
-| easyDNS（脚本端点） | `/dyn/tomato.php`，`/dyn/generic.php` | Query 凭据：`username`、`password` | `username`=账号；`password`=token；`hostname`=主机名；`myip`=IP | 同 DynDNS 响应或状态码 | easyDNS |
-| DtDNS（AutoDNS） | `/api/autodns.cfm` | Query 凭据：`pw`（明文，建议 HTTPS） | `id`=FQDN；`pw`=密码；`ip`=IP（可选，缺省取源地址）；`client`=标识（可选） | 成功：`Host <id> now points to <ip>.`；错误：缺参/密码错/未激活/IP 非法等文本 | DtDNS |
+| easyDNS（脚本端点） | `/dyn/tomato.php`，`/dyn/generic.php` | Query 凭据：`username`、`password` | `username`=账号；`password`=token；`hostname`=主机名；`myip`=IP | 兼容 DynDNS 响应 | easyDNS |
+| DtDNS（AutoDNS） | `/api/autodns.cfm` | Query 凭据：`pw`（明文，建议 HTTPS） | `id`=FQDN；`pw`=密码；`ip`=IP（可选，缺省取源地址）；`client`=标识（可选） | 兼容 DynDNS 响应（实现上沿用 DynDNS 模式） | DtDNS |
 
 **常用参数别名（不区分大小写）：**
 - 用户：`user`,`username`,`usr`,`name` 或 Basic Auth

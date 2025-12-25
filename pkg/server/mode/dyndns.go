@@ -15,12 +15,12 @@ func (m *DynMode) Prepare(r *http.Request) (*Request, Outcome) {
 
 	headerUser, headerPass, basicAuthProvided := r.BasicAuth()
 	queryUser := getQueryParam(q, "user", "username", "usr", "name")
-	queryPass := getQueryParam(q, "pass", "password", "pwd")
+	queryPass := getQueryParam(q, "pass", "password", "pwd", "pw")
 
 	username := preferValue(headerUser, queryUser)
 	password := preferValue(headerPass, queryPass)
 
-	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
+	domain := getQueryParam(q, "domn", "domain", "hostname", "host", "id") // id for DtDNS
 	ip := getQueryParam(q, "addr", "myip", "ip")
 	reqcStr := getQueryParam(q, "reqc")
 	reqc, err := parseReqc(reqcStr)
