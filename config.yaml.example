@@ -12,8 +12,3 @@ users:
   - username: "123456"          # Dnspod ID
     password: "TokenValue"      # Dnspod Token
     provider: "tencent"
-  
-  # Now-DNS 用户示例
-  - username: "user@example.com" # Now-DNS Email
-    password: "api_token"        # Now-DNS Password or API Token
-    provider: "nowdns"
