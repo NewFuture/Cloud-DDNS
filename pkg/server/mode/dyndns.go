@@ -15,26 +15,6 @@ type DynMode struct {
 	debugLogf       func(format string, args ...interface{})
 }
 
-func NewDynDNSMode(debug func(format string, args ...interface{})) Mode {
-	return NewDynMode(false, debug)
-}
-
-func NewGnuHTTPMode(debug func(format string, args ...interface{})) Mode {
-	return NewDynMode(true, debug)
-}
-
-func NewDtDNSMode(debug func(format string, args ...interface{})) Mode {
-	return NewDynMode(false, debug)
-}
-
-func NewEasyDNSMode(debug func(format string, args ...interface{})) Mode {
-	return NewDynMode(false, debug)
-}
-
-func NewOrayMode(debug func(format string, args ...interface{})) Mode {
-	return NewDynMode(false, debug)
-}
-
 // NewDynMode creates a DynMode instance.
 func NewDynMode(numeric bool, debug func(format string, args ...interface{})) *DynMode {
 	return &DynMode{
