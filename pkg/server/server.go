@@ -86,7 +86,7 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 		m = mode.NewGnuHTTPMode(debugLogf)
 	} else {
 		switch r.URL.Path {
-		case "/dyn/generic.php", "/dyn/tomato.php":
+		case "/dyn/generic.php", "/dyn/tomato.php", "/dyn/ez-ipupdate.php":
 			m = mode.NewEasyDNSMode(debugLogf)
 		case "/api/autodns.cfm":
 			m = mode.NewDtDNSMode(debugLogf)
@@ -116,6 +116,7 @@ func StartHTTP(port int) {
 	http.HandleFunc("/ph/update", handleDDNSUpdate)       // Oray
 	http.HandleFunc("/dyn/generic.php", handleDDNSUpdate) // easyDNS
 	http.HandleFunc("/dyn/tomato.php", handleDDNSUpdate)  // easyDNS
+	http.HandleFunc("/dyn/ez-ipupdate.php", handleDDNSUpdate)
 	http.HandleFunc("/api/autodns.cfm", handleDDNSUpdate) // DtDNS
 	http.HandleFunc("/cgi-bin/gdipupdt.cgi", handleCGIUpdate)
 	http.HandleFunc("/", handleDDNSUpdate)
