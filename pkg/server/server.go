@@ -42,7 +42,7 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 	if lrw.status == 0 {
 		lrw.status = http.StatusOK
 	}
-	lrw.body.Write(b)
+	_, _ = lrw.body.Write(b)
 	return lrw.ResponseWriter.Write(b)
 }
 
@@ -71,11 +71,13 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericResponse bool) {
-	bodyBytes, err := io.ReadAll(r.Body)
+	const maxLoggedBody = 4096 // cap logged body to 4KB to prevent excessive memory usage
+	limitedBody := io.LimitReader(r.Body, maxLoggedBody)
+	bodyBytes, err := io.ReadAll(limitedBody)
 	if err != nil {
-		debugLogf("HTTP request body read error: %v", err)
+		debugLogf("HTTP request body read error after %d bytes (logging partial body): %v", len(bodyBytes), err)
 	}
-	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	debugLogf("HTTP request rawURL=%q auth=%q body=%q", r.URL.String(), r.Header.Get("Authorization"), string(bodyBytes))
 
 	lrw := &loggingResponseWriter{ResponseWriter: w, status: http.StatusOK}

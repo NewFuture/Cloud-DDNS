@@ -27,6 +27,8 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	now := time.Now()
+	// Use nanosecond offset (within the current second) so the fractional part doesn't repeat the seconds value,
+	// avoiding duplicate salts when multiple connections arrive in the same second.
 	salt := fmt.Sprintf("%d.%09d", now.Unix(), now.Nanosecond())
 	m.debugLogf("Generated salt %s for %s", salt, conn.RemoteAddr().String())
 	if _, err := conn.Write([]byte(salt + "\n")); err != nil {
