@@ -109,8 +109,8 @@ func TestEasyDNSResponseCodes(t *testing.T) {
 
 		handler(w, req)
 
-		if got := strings.TrimSpace(w.Body.String()); got != "NOERROR" {
-			t.Fatalf("expected NOERROR, got %q", got)
+		if got := strings.TrimSpace(w.Body.String()); got != "OK" {
+			t.Fatalf("expected OK, got %q", got)
 		}
 	})
 }
