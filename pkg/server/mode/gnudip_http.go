@@ -1,0 +1,135 @@
+package mode
+
+import (
+	"crypto/md5"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/NewFuture/CloudDDNS/pkg/config"
+	"github.com/NewFuture/CloudDDNS/pkg/provider"
+)
+
+// GnuHTTPMode implements the two-step GnuDIP HTTP challenge flow.
+// Step 1: client requests without pass/sign -> server returns meta tags with retc/time/sign/addr.
+// Step 2: client requests with pass/sign (md5(user:time:secret)) -> server validates and updates.
+type GnuHTTPMode struct {
+	debugLogf func(format string, args ...interface{})
+}
+
+func NewGnuHTTPMode(debug func(format string, args ...interface{})) Mode {
+	return &GnuHTTPMode{debugLogf: debug}
+}
+
+func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
+	q := r.URL.Query()
+
+	user := GetQueryParam(q, "user", "username")
+	domain := GetQueryParam(q, "domn", "domain", "hostname", "host")
+	pass := GetQueryParam(q, "pass", "password", "pwd", "sign")
+	timeParam := GetQueryParam(q, "time")
+	ip := GetQueryParam(q, "addr", "myip", "ip")
+
+	if domain == "" || len(domain) < 3 || len(domain) > 253 {
+		log.Printf("Invalid domain: %q", domain)
+		return &Request{}, OutcomeInvalidDomain
+	}
+
+	reqc := 0
+	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
+	if err != nil {
+		log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
+		return &Request{Reqc: reqc}, OutcomeSystemError
+	}
+
+	req := &Request{
+		Username:   user,
+		Password:   pass,
+		Domain:     domain,
+		IP:         resolvedIP,
+		Reqc:       reqc,
+		RemoteAddr: r.RemoteAddr,
+		Time:       timeParam,
+	}
+
+	m.debugLogf("GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s", user, domain, resolvedIP, timeParam, r.RemoteAddr)
+	return req, OutcomeSuccess
+}
+
+func (m *GnuHTTPMode) Process(req *Request) Outcome {
+	u := config.GetUser(req.Username)
+	if u == nil {
+		log.Printf("Authentication failed for user: %q", req.Username)
+		return OutcomeAuthFailure
+	}
+
+	// Two-step: if Password is empty, defer auth to Respond (will issue challenge).
+	if req.Password == "" {
+		return OutcomeAuthFailure
+	}
+
+	if req.Time != "" {
+		expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", req.Username, req.Time, u.Password))))
+		if req.Password != expected {
+			return OutcomeAuthFailure
+		}
+	} else {
+		// Validate hashed or plaintext using helpers
+		if !verifyPassword(u.Password, req.Password) {
+			return OutcomeAuthFailure
+		}
+	}
+
+	p, err := provider.GetProvider(u)
+	if err != nil {
+		log.Printf("Provider error for user %q: %v", req.Username, err)
+		return OutcomeSystemError
+	}
+
+	if err := p.UpdateRecord(req.Domain, req.IP); err != nil {
+		log.Printf("UpdateRecord error for domain %q and ip %q: %v", req.Domain, req.IP, err)
+		return OutcomeSystemError
+	}
+
+	log.Printf("Successfully updated %s to %s", req.Domain, req.IP)
+	return OutcomeSuccess
+}
+
+func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) {
+	// If no password provided, issue challenge page.
+	if req != nil && req.Password == "" {
+		now := time.Now().Unix()
+		user := req.Username
+		u := config.GetUser(user)
+		if u == nil {
+			if _, err := w.Write([]byte("1")); err != nil {
+				log.Printf("HTTP Write Error: %v", err)
+			}
+			return
+		}
+		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
+		body := fmt.Sprintf(`<html><head><meta name="retc" content="0"><meta name="time" content="%d"><meta name="sign" content="%s"><meta name="addr" content="%s"></head><body></body></html>`, now, sign, req.IP)
+		if _, err := w.Write([]byte(body)); err != nil {
+			log.Printf("HTTP Write Error: %v", err)
+		}
+		return
+	}
+
+	// Standard response mapping similar to DynDNS numeric
+	var body string
+	switch outcome {
+	case OutcomeSuccess:
+		body = "0"
+	case OutcomeAuthFailure:
+		body = "1"
+	case OutcomeInvalidDomain:
+		body = "1"
+	default:
+		body = "1"
+	}
+
+	if _, err := w.Write([]byte(body)); err != nil {
+		log.Printf("HTTP Write Error: %v", err)
+	}
+}

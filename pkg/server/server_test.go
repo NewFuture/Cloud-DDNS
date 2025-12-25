@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
+	"github.com/NewFuture/CloudDDNS/pkg/server/mode"
 )
 
 func TestComputeMD5Hash(t *testing.T) {
@@ -174,7 +175,7 @@ func TestResolveRequestIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip, err := resolveRequestIP(tt.reqc, tt.providedIP, tt.remoteAddr)
+			ip, err := mode.ResolveRequestIP(tt.reqc, tt.providedIP, tt.remoteAddr)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("resolveRequestIP error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -356,7 +357,7 @@ func TestTCPServerIntegration(t *testing.T) {
 				if err != nil {
 					return // Listener closed
 				}
-				go handleTCPConnection(conn)
+				go mode.NewGnuTCPMode(debugLogf).Handle(conn)
 			}
 		}
 	}()
@@ -545,7 +546,7 @@ func TestGetQueryParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getQueryParam(tt.query, tt.aliases...)
+			result := mode.GetQueryParam(tt.query, tt.aliases...)
 			if result != tt.expected {
 				t.Errorf("getQueryParam() = %q, want %q", result, tt.expected)
 			}
@@ -657,7 +658,7 @@ func TestVerifyPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := verifyPassword(tt.storedPassword, tt.inputPassword)
+			result := mode.VerifyPassword(tt.storedPassword, tt.inputPassword)
 			if result != tt.expectedSuccess {
 				t.Errorf("verifyPassword(%q, %q) = %v, want %v",
 					tt.storedPassword, tt.inputPassword, result, tt.expectedSuccess)
@@ -700,6 +701,23 @@ func TestHTTPServerIntegration(t *testing.T) {
 		response := w.Body.String()
 		// Will return "911" because provider credentials are invalid (test credentials)
 		// In real usage with valid credentials, it would return "good <ip>"
+		if response != "911" && !strings.HasPrefix(response, "good ") {
+			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		}
+	})
+
+	t.Run("Successful request using Basic Auth", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/?domain=test.example.com&addr=1.2.3.4", nil)
+		req.SetBasicAuth("testuser", "testpass")
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
 		if response != "911" && !strings.HasPrefix(response, "good ") {
 			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
 		}
@@ -905,4 +923,26 @@ func TestHTTPServerIntegration(t *testing.T) {
 			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
 		}
 	})
+}
+
+func TestDDNSServicePrefersBasicAuth(t *testing.T) {
+	service := mode.NewDynMode(false, debugLogf)
+	req := httptest.NewRequest("GET", "/?user=queryUser&pass=queryPass&domain=test.example.com&addr=1.1.1.1", nil)
+	req.RemoteAddr = "10.0.0.2:12345"
+	req.SetBasicAuth("headerUser", "headerPass")
+
+	ddnsReq, outcome := service.Prepare(req)
+	if outcome != mode.OutcomeSuccess {
+		t.Fatalf("expected success outcome, got %v", outcome)
+	}
+
+	if ddnsReq.Username != "headerUser" {
+		t.Fatalf("expected username from header, got %s", ddnsReq.Username)
+	}
+	if ddnsReq.Password != "headerPass" {
+		t.Fatalf("expected password from header, got %s", ddnsReq.Password)
+	}
+	if ddnsReq.IP != "1.1.1.1" {
+		t.Fatalf("expected parsed IP 1.1.1.1, got %s", ddnsReq.IP)
+	}
 }

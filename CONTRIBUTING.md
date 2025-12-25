@@ -27,6 +27,13 @@ go build -o cloud-ddns main.go
 - `pkg/provider/` - Cloud provider adapters (Aliyun, Tencent, etc.)
 - `pkg/server/` - GnuDIP protocol implementation (TCP & HTTP)
 
+## Provider credential mapping
+
+| Provider  | Username (request/Basic Auth) | Password (request/Basic Auth)         | Notes                          |
+|-----------|-------------------------------|---------------------------------------|--------------------------------|
+| aliyun    | AccessKey ID                  | AccessKey Secret                      | Passed directly to AliDNS API  |
+| tencent   | DNSPod ID/Token ID            | DNSPod Token value                    | Uses Tencent DNSPod API        |
+
 ## Adding a New Cloud Provider
 
 To add support for a new cloud DNS provider:
