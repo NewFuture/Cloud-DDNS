@@ -17,6 +17,7 @@ import (
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
+	"github.com/NewFuture/CloudDDNS/pkg/server/mode"
 )
 
 var debugEnabled atomic.Bool
@@ -358,20 +359,12 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 
 func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericResponse bool) {
 	debugLogf("HTTP request %s %s rawQuery=%q", r.Method, r.URL.Path, r.URL.RawQuery)
-
-	service := newDefaultDDNSService()
-	req, outcome := service.PrepareHTTPRequest(r, numericResponse)
-	if outcome != responseSuccess {
-		reqc := 0
-		if req != nil {
-			reqc = req.Reqc
-		}
-		sendHTTPResponse(w, numericResponse, reqc, outcome, "")
-		return
+	m := mode.NewDynMode(numericResponse, debugLogf)
+	req, outcome := m.Prepare(r)
+	if outcome == mode.OutcomeSuccess {
+		outcome = m.Process(req)
 	}
-
-	outcome = service.Process(req)
-	sendHTTPResponse(w, numericResponse, req.Reqc, outcome, req.IP)
+	m.Respond(w, req, outcome)
 }
 
 func handleCGIUpdate(w http.ResponseWriter, r *http.Request) {

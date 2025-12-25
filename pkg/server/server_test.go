@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
+	"github.com/NewFuture/CloudDDNS/pkg/server/mode"
 )
 
 func TestComputeMD5Hash(t *testing.T) {
@@ -925,13 +926,13 @@ func TestHTTPServerIntegration(t *testing.T) {
 }
 
 func TestDDNSServicePrefersBasicAuth(t *testing.T) {
-	service := newDefaultDDNSService()
+	service := mode.NewDynMode(false, debugLogf)
 	req := httptest.NewRequest("GET", "/?user=queryUser&pass=queryPass&domain=test.example.com&addr=1.1.1.1", nil)
 	req.RemoteAddr = "10.0.0.2:12345"
 	req.SetBasicAuth("headerUser", "headerPass")
 
-	ddnsReq, outcome := service.PrepareHTTPRequest(req, false)
-	if outcome != responseSuccess {
+	ddnsReq, outcome := service.Prepare(req)
+	if outcome != mode.OutcomeSuccess {
 		t.Fatalf("expected success outcome, got %v", outcome)
 	}
 
