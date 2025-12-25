@@ -975,6 +975,23 @@ func TestHTTPServerIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("GnuDIP HTTP handshake on /nic/update without password", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/nic/update?user=testuser&domn=test.example.com", nil)
+		req.RemoteAddr = "203.0.113.10:4321"
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		if !strings.Contains(response, `<meta name="retc" content="0">`) || !strings.Contains(response, `<meta name="sign"`) {
+			t.Errorf("Expected GnuDIP challenge response, got '%s'", response)
+		}
+	})
+
 	t.Run("EasyDNS ez-ipupdate with host_id parameter", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/dyn/ez-ipupdate.php?action=edit&myip=1.2.3.4&wildcard=OFF&mx=&backmx=NO&host_id=easydns.new.com&user=testuser&pass=testpass", nil)
 		w := httptest.NewRecorder()
