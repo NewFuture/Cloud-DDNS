@@ -71,7 +71,7 @@ func TestQDNSAuthReqcAndValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler(w, req)
 		resp := strings.TrimSpace(w.Body.String())
-		if resp != "good 0.0.0.0" && resp != "good" {
+		if resp != "good 0.0.0.0" {
 			t.Fatalf("expected good with 0.0.0.0 for reqc=1, got %q", resp)
 		}
 	})
@@ -84,7 +84,7 @@ func TestQDNSAuthReqcAndValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler(w, req)
 		resp := strings.TrimSpace(w.Body.String())
-		if resp != "good 9.8.7.6" && resp != "good" {
+		if resp != "good 9.8.7.6" {
 			t.Fatalf("expected good with provided IP, got %q", resp)
 		}
 	})

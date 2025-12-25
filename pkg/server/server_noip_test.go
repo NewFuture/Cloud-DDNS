@@ -9,7 +9,7 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 )
 
-// TestNoIPNicUpdate ensures No-IP compatible /nic/update uses DynDNS flow.
+// TestNoIPNicUpdate verifies authentication failure handling on the No-IP /nic/update endpoint.
 func TestNoIPNicUpdate(t *testing.T) {
 	originalConfig := config.GlobalConfig
 	defer func() { config.GlobalConfig = originalConfig }()
@@ -42,7 +42,7 @@ func TestNoIPNicUpdate(t *testing.T) {
 	}
 }
 
-func TestNoIPMoreScenarios(t *testing.T) {
+func TestNoIPNicUpdateAdditionalBehaviors(t *testing.T) {
 	originalConfig := config.GlobalConfig
 	defer func() { config.GlobalConfig = originalConfig }()
 
@@ -85,7 +85,7 @@ func TestNoIPMoreScenarios(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler(w, req)
 		resp := strings.TrimSpace(w.Body.String())
-		if resp != "good 198.51.100.77" && resp != "good" {
+		if resp != "good 198.51.100.77" {
 			t.Fatalf("expected good with remote IP, got %q", resp)
 		}
 	})

@@ -104,8 +104,8 @@ func TestDynDNSAuthAndValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler(w, req)
 		resp := strings.TrimSpace(w.Body.String())
-		if resp != "good 203.0.113.50" && resp != "good" {
-			t.Fatalf("expected good with remote IP, got %q", resp)
+		if resp != "good 203.0.113.50" {
+			t.Fatalf("expected 'good 203.0.113.50' with remote IP, got %q", resp)
 		}
 	})
 }
