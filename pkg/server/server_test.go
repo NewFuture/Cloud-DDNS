@@ -705,6 +705,52 @@ func TestVerifyPassword(t *testing.T) {
 	}
 }
 
+func TestUnmatchedPathDefaultsToDynModeAndLogs(t *testing.T) {
+	originalConfig := config.GlobalConfig
+	originalOutput := log.Writer()
+	originalFlags := log.Flags()
+	defer func() {
+		config.GlobalConfig = originalConfig
+		log.SetOutput(originalOutput)
+		log.SetFlags(originalFlags)
+		SetDebug(false)
+	}()
+
+	config.GlobalConfig = config.Config{
+		Users: []config.UserConfig{
+			{
+				Username: "testuser",
+				Password: "testpass",
+				Provider: "aliyun",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	SetDebug(true)
+
+	req := httptest.NewRequest("GET", "/unmatched/path?user=testuser&pass=wrongpass&domn=test.example.com&addr=1.2.3.4", nil)
+	w := httptest.NewRecorder()
+
+	handleDDNSUpdate(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	response := strings.TrimSpace(w.Body.String())
+	if response != "badauth" {
+		t.Fatalf("expected badauth from DynDNS fallback, got %q", response)
+	}
+
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "Unmatched HTTP path=/unmatched/path") || !strings.Contains(logOutput, "method=GET") {
+		t.Fatalf("expected debug log for unmatched path and method, got %q", logOutput)
+	}
+}
+
 // Integration test for HTTP server handler
 func TestHTTPServerIntegration(t *testing.T) {
 	// Save original config and restore after test

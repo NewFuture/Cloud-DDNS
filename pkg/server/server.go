@@ -91,6 +91,7 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 		case "/api/autodns.cfm":
 			m = mode.NewDtDNSMode(debugLogf)
 		default:
+			debugLogf("Unmatched HTTP path=%s method=%s defaulting to DynDNS mode", r.URL.Path, r.Method)
 			m = mode.NewDynMode(false, debugLogf)
 		}
 	}
