@@ -22,6 +22,7 @@ func NewEasyDNSMode(debug func(format string, args ...interface{})) Mode {
 //   - OutcomeInvalidDomain -> "ILLEGAL INPUT"
 //   - OutcomeSystemError   -> "NOSERVICE"
 //   - any other outcome    -> "NOSERVICE"
+//
 // For protocol details, see the EasyDNS dynamic DNS API documentation.
 func (m *EasyDNSMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) {
 	var body string
