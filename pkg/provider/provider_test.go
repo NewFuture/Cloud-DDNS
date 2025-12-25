@@ -3,6 +3,7 @@ package provider
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
@@ -394,7 +395,7 @@ func TestNowDNSProviderUpdateRecord(t *testing.T) {
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error, got nil")
-				} else if tt.errorContains != "" && !containsString(err.Error(), tt.errorContains) {
+				} else if tt.errorContains != "" && !strings.Contains(err.Error(), tt.errorContains) {
 					t.Errorf("Expected error to contain '%s', got '%s'", tt.errorContains, err.Error())
 				}
 			} else {
@@ -415,18 +416,4 @@ func TestNowDNSProviderUpdateRecordHTTPError(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}
-}
-
-// Helper function to check if string contains substring
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

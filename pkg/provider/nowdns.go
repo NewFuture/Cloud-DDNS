@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -28,8 +29,8 @@ func NewNowDNSProvider(email, password string) *NowDNSProvider {
 
 // UpdateRecord updates the DNS record for the given domain to the specified IP.
 func (p *NowDNSProvider) UpdateRecord(domain string, ip string) error {
-	// Build request URL
-	reqURL := fmt.Sprintf("%s?hostname=%s&myip=%s", p.endpoint, domain, ip)
+	// Build request URL with properly escaped parameters
+	reqURL := fmt.Sprintf("%s?hostname=%s&myip=%s", p.endpoint, url.QueryEscape(domain), url.QueryEscape(ip))
 
 	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
