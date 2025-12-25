@@ -219,40 +219,6 @@ func TestOrayTCPProtocol(t *testing.T) {
 	})
 }
 
-// TestOrayTCPHashComputation tests the Oray hash computation function
-func TestOrayTCPHashComputation(t *testing.T) {
-	tests := []struct {
-		name     string
-		username string
-		password string
-		salt     string
-		want     string
-	}{
-		{
-			name:     "Basic hash",
-			username: "user",
-			password: "pass",
-			salt:     "salt123",
-			want:     "4a52d6e8f3e8c8a8f8f8f8f8f8f8f8f8", // This is just for structure, actual hash may differ
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := mode.ComputeOrayHash(tt.username, tt.password, tt.salt)
-			if len(got) != 32 {
-				t.Errorf("ComputeOrayHash() returned hash of length %d, expected 32", len(got))
-			}
-			// Verify it's hexadecimal
-			for _, c := range got {
-				if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-					t.Errorf("ComputeOrayHash() returned non-hex character: %c", c)
-				}
-			}
-		})
-	}
-}
-
 // TestOrayTCPConcurrentConnections tests handling multiple concurrent connections
 func TestOrayTCPConcurrentConnections(t *testing.T) {
 	// Save original config and restore after test

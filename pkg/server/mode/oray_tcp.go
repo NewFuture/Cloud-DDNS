@@ -2,7 +2,6 @@ package mode
 
 import (
 	"bufio"
-	"crypto/md5"
 	"fmt"
 	"log"
 	"net"
@@ -14,7 +13,8 @@ import (
 )
 
 // OrayTCPMode handles Oray (PeanutHull/花生壳) TCP protocol.
-// Protocol format: username:password:hostname:ip
+// Protocol format: username:password:hostname[:ip]
+// IP parameter is optional - if not provided, client's remote address is used automatically
 // Response: good <ip> / badauth / notfqdn / 911
 type OrayTCPMode struct {
 	debugLogf func(format string, args ...interface{})
@@ -160,10 +160,4 @@ func (m *OrayTCPMode) writeResponse(conn net.Conn, response string) {
 	if _, err := conn.Write([]byte(response + "\n")); err != nil {
 		log.Printf("Oray TCP write error: %v", err)
 	}
-}
-
-// ComputeOrayHash computes MD5 hash for Oray authentication (if needed for extended protocol)
-func ComputeOrayHash(username, password, salt string) string {
-	data := fmt.Sprintf("%s:%s:%s", username, password, salt)
-	return fmt.Sprintf("%x", md5.Sum([]byte(data)))
 }
