@@ -926,7 +926,7 @@ func TestHTTPServerIntegration(t *testing.T) {
 
 func TestDDNSServicePrefersBasicAuth(t *testing.T) {
 	service := newDefaultDDNSService()
-	req := httptest.NewRequest("GET", "/?user=queryUser&pass=queryPass&domn=test.example.com&addr=1.1.1.1", nil)
+	req := httptest.NewRequest("GET", "/?user=queryUser&pass=queryPass&domain=test.example.com&addr=1.1.1.1", nil)
 	req.RemoteAddr = "10.0.0.2:12345"
 	req.SetBasicAuth("headerUser", "headerPass")
 

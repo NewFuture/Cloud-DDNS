@@ -87,8 +87,8 @@ func (s *defaultDDNSService) PrepareHTTPRequest(r *http.Request, numeric bool) (
 		RemoteAddr:      r.RemoteAddr,
 	}
 
-	debugLogf("Credential source basicAuth=%t user=%s queryUser=%s", basicAuthProvided, headerUser, queryUser)
-	debugLogf("Prepared DDNSRequest user=%s domain=%s ip=%s reqc=%d numeric=%t remote=%s", username, domain, resolvedIP, reqc, numeric, r.RemoteAddr)
+	debugLogf("Credential source basicAuth=%t headerProvided=%t queryProvided=%t", basicAuthProvided, headerUser != "", queryUser != "")
+	debugLogf("Prepared DDNSRequest domain=%s ip=%s reqc=%d numeric=%t remote=%s", domain, resolvedIP, reqc, numeric, r.RemoteAddr)
 	return req, responseSuccess
 }
 
