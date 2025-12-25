@@ -357,76 +357,21 @@ func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericResponse bool) {
-	q := r.URL.Query()
-	debugLogf("HTTP request %s %s rawQuery=%q params=%v", r.Method, r.URL.Path, r.URL.RawQuery, q)
+	debugLogf("HTTP request %s %s rawQuery=%q", r.Method, r.URL.Path, r.URL.RawQuery)
 
-	// Support multiple parameter aliases (case-insensitive).
-	user := getQueryParam(q, "user", "username", "usr", "name")
-	pass := getQueryParam(q, "pass", "password", "pwd")
-	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
-	ip := getQueryParam(q, "addr", "myip", "ip")
-	reqcStr := getQueryParam(q, "reqc")
-	reqc, err := parseReqc(reqcStr)
-	if err != nil {
-		log.Printf("Invalid reqc value %q: %v", reqcStr, err)
-		sendHTTPResponse(w, numericResponse, 0, responseSystemError, "")
+	service := newDefaultDDNSService()
+	req, outcome := service.PrepareHTTPRequest(r, numericResponse)
+	if outcome != responseSuccess {
+		reqc := 0
+		if req != nil {
+			reqc = req.Reqc
+		}
+		sendHTTPResponse(w, numericResponse, reqc, outcome, "")
 		return
 	}
 
-	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
-	if err != nil {
-		log.Printf("Invalid RemoteAddr format: %q, error: %v", r.RemoteAddr, err)
-		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
-		return
-	}
-	ip = resolvedIP
-	debugLogf("HTTP parsed user=%s domain=%s ip=%s remote=%s reqc=%d", user, domain, ip, r.RemoteAddr, reqc)
-
-	// Validate IP address
-	if net.ParseIP(ip) == nil {
-		log.Printf("Invalid IP address: %q", ip)
-		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
-		return
-	}
-
-	// Validate domain
-	if domain == "" || len(domain) < 3 || len(domain) > 253 {
-		log.Printf("Invalid domain: %q", domain)
-		sendHTTPResponse(w, numericResponse, reqc, responseInvalidDomain, "")
-		return
-	}
-	debugLogf("HTTP domain validation passed for %s", domain)
-
-	// Authentication - supports multiple password formats.
-	u := config.GetUser(user)
-	if u == nil || !verifyPassword(u.Password, pass) {
-		log.Printf("Authentication failed for user: %q", user)
-		debugLogf("HTTP authentication failed for user=%s", user)
-		sendHTTPResponse(w, numericResponse, reqc, responseAuthFailure, "")
-		return
-	}
-	debugLogf("HTTP authentication succeeded for user=%s", user)
-
-	// Initialize provider
-	p, err := provider.GetProvider(u)
-	if err != nil {
-		log.Printf("Provider error for user %q: %v", user, err)
-		debugLogf("HTTP provider init failed for user=%s provider=%s error=%v", user, u.Provider, err)
-		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
-		return
-	}
-	debugLogf("HTTP provider initialized for user=%s provider=%s", user, u.Provider)
-
-	// Update DNS record
-	if err := p.UpdateRecord(domain, ip); err != nil {
-		log.Printf("UpdateRecord error for domain %q and ip %q: %v", domain, ip, err)
-		debugLogf("HTTP DNS update failed for domain=%s ip=%s error=%v", domain, ip, err)
-		sendHTTPResponse(w, numericResponse, reqc, responseSystemError, "")
-	} else {
-		log.Printf("Successfully updated %s to %s", domain, ip)
-		debugLogf("HTTP DNS update succeeded for domain=%s ip=%s", domain, ip)
-		sendHTTPResponse(w, numericResponse, reqc, responseSuccess, ip)
-	}
+	outcome = service.Process(req)
+	sendHTTPResponse(w, numericResponse, req.Reqc, outcome, req.IP)
 }
 
 func handleCGIUpdate(w http.ResponseWriter, r *http.Request) {

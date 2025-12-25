@@ -40,9 +40,9 @@ pkg/
 
 3. **Server Module** (`pkg/server/`)
    - GnuDIP protocol TCP server with MD5 challenge-response
-   - HTTP simple mode with query parameters
-   - IP address extraction from client connections
-   - Files: `server.go`, `server_test.go`
+   - HTTP simple mode with query parameters **and Basic Auth fallback**
+   - `DDNSService` front layer (`ddns_service.go`) standardizes parameters, resolves missing IPs from RemoteAddr, validates domain/IP, performs authentication, and delegates to providers
+   - Files: `server.go`, `ddns_service.go`, `server_test.go`
 
 4. **Main Entry** (`main.go`)
    - Initializes configuration from `config.yaml`
@@ -59,9 +59,10 @@ pkg/
 5. Response: `0` (success) or `1` (failure)
 
 ### HTTP Simple Mode
-- Endpoint: `/?user=KEY&pass=SECRET&domn=DOMAIN&addr=IP`
-- Auto-detects client IP if `addr` parameter is omitted or empty
-- Returns: `0` for success or error message
+- Endpoints: `/`, `/update`, `/nic/update`, `/cgi-bin/gdipupdt.cgi`
+- Authentication: HTTP Basic Auth **or** URL parameters (`user`/`pass` aliases)
+- IP resolution: `addr`/`myip` optional; when empty uses client `RemoteAddr`; `reqc=1` forces `0.0.0.0`, `reqc=2` always uses `RemoteAddr`
+- Returns: `good <ip>` / `badauth` / `notfqdn` / `911` or numeric `0/1/2` for CGI path
 
 ### Authentication Pattern
 - **Pass-through authentication**: No credential translation

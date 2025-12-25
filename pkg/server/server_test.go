@@ -705,6 +705,23 @@ func TestHTTPServerIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("Successful request using Basic Auth", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/?domn=test.example.com&addr=1.2.3.4", nil)
+		req.SetBasicAuth("testuser", "testpass")
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		if response != "911" && !strings.HasPrefix(response, "good ") {
+			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		}
+	})
+
 	t.Run("Successful request with domain parameter", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/?user=testuser&pass=testpass&domain=test.example.com&addr=1.2.3.4", nil)
 		w := httptest.NewRecorder()
@@ -905,4 +922,26 @@ func TestHTTPServerIntegration(t *testing.T) {
 			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
 		}
 	})
+}
+
+func TestDDNSServicePrefersBasicAuth(t *testing.T) {
+	service := newDefaultDDNSService()
+	req := httptest.NewRequest("GET", "/?user=queryUser&pass=queryPass&domn=test.example.com&addr=1.1.1.1", nil)
+	req.RemoteAddr = "10.0.0.2:12345"
+	req.SetBasicAuth("headerUser", "headerPass")
+
+	ddnsReq, outcome := service.PrepareHTTPRequest(req, false)
+	if outcome != responseSuccess {
+		t.Fatalf("expected success outcome, got %v", outcome)
+	}
+
+	if ddnsReq.Username != "headerUser" {
+		t.Fatalf("expected username from header, got %s", ddnsReq.Username)
+	}
+	if ddnsReq.Password != "headerPass" {
+		t.Fatalf("expected password from header, got %s", ddnsReq.Password)
+	}
+	if ddnsReq.IP != "1.1.1.1" {
+		t.Fatalf("expected parsed IP 1.1.1.1, got %s", ddnsReq.IP)
+	}
 }

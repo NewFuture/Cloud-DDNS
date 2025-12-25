@@ -24,6 +24,20 @@
 - ✅ **智能更新**：IP 未变化时不调用 API，节省成本
 - ✅ **Docker 支持**：提供 Docker 镜像，快速部署
 
+### 工作原理（用户视角）
+
+1. 客户端（路由器/光猫/NVR）通过 **Basic Auth** 或 URL 参数提交更新请求（HTTP `/`, `/update`, `/nic/update`, `/cgi-bin/gdipupdt.cgi`，或 GnuDIP TCP 3495）。
+2. 前端 `DDNSService` 统一解析参数：提取凭证、域名、`reqc` 模式，若未提供 IP 则使用请求源地址，校验域名/IP 合法性。
+3. 通过配置匹配云厂商 Provider，执行 DNS 记录更新并按协议返回标准响应码。
+
+```
+Client (BasicAuth / URL 参数)
+    └─ HTTP/TCP Frontend
+         └─ DDNSService: 认证 + IP 判定 + reqc 处理
+              └─ Provider (Aliyun / Tencent / ...)
+                   └─ Cloud DNS 记录更新
+```
+
 ### 快速开始
 
 #### 方式一：Docker（推荐）
