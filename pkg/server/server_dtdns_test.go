@@ -191,14 +191,14 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 		},
 	}
 
-	dtdnsMode := mode.NewDtDNSMode(debugLogf)
+	dynMode := mode.NewDynMode(false, debugLogf)
 
 	t.Run("DtDNS mode Prepare extracts hostname from id parameter", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/autodns.cfm?id=test.example.com&ip=1.2.3.4", nil)
 		req.SetBasicAuth("testuser", "testpass")
 		req.RemoteAddr = "10.0.0.1:1234"
 
-		ddnsReq, outcome := dtdnsMode.Prepare(req)
+		ddnsReq, outcome := dynMode.Prepare(req)
 		if outcome != mode.OutcomeSuccess {
 			t.Fatalf("expected success outcome, got %v", outcome)
 		}
@@ -216,7 +216,7 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 		req.SetBasicAuth("testuser", "testpass")
 		req.RemoteAddr = "10.0.0.1:1234"
 
-		ddnsReq, outcome := dtdnsMode.Prepare(req)
+		ddnsReq, outcome := dynMode.Prepare(req)
 		if outcome != mode.OutcomeSuccess {
 			t.Fatalf("expected success outcome, got %v", outcome)
 		}
@@ -235,7 +235,7 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 			Domain: "test.example.com",
 			IP:     "1.2.3.4",
 		}
-		dtdnsMode.Respond(w, ddnsReq, mode.OutcomeSuccess)
+		dynMode.Respond(w, ddnsReq, mode.OutcomeSuccess)
 
 		response := strings.TrimSpace(w.Body.String())
 		if !strings.HasPrefix(response, "good") {
@@ -249,7 +249,7 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 			Domain: "test.example.com",
 			IP:     "1.2.3.4",
 		}
-		dtdnsMode.Respond(w, ddnsReq, mode.OutcomeAuthFailure)
+		dynMode.Respond(w, ddnsReq, mode.OutcomeAuthFailure)
 
 		response := strings.TrimSpace(w.Body.String())
 		if response != "badauth" {
@@ -263,7 +263,7 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 			Domain: "ab",
 			IP:     "1.2.3.4",
 		}
-		dtdnsMode.Respond(w, ddnsReq, mode.OutcomeInvalidDomain)
+		dynMode.Respond(w, ddnsReq, mode.OutcomeInvalidDomain)
 
 		response := strings.TrimSpace(w.Body.String())
 		if response != "notfqdn" {
@@ -277,7 +277,7 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 			Domain: "test.example.com",
 			IP:     "1.2.3.4",
 		}
-		dtdnsMode.Respond(w, ddnsReq, mode.OutcomeSystemError)
+		dynMode.Respond(w, ddnsReq, mode.OutcomeSystemError)
 
 		response := strings.TrimSpace(w.Body.String())
 		if response != "911" {
@@ -292,13 +292,34 @@ func TestDtDNSModeResponseCodes(t *testing.T) {
 		// Add user to query params instead of Basic Auth
 		req.URL.RawQuery = req.URL.RawQuery + "&user=testuser"
 
-		ddnsReq, outcome := dtdnsMode.Prepare(req)
+		ddnsReq, outcome := dynMode.Prepare(req)
 		if outcome != mode.OutcomeSuccess {
 			t.Fatalf("expected success outcome, got %v", outcome)
 		}
 
 		if ddnsReq.Password != "testpass" {
 			t.Errorf("Expected password 'testpass' from pw param, got '%s'", ddnsReq.Password)
+		}
+	})
+
+	t.Run("DtDNS HTTP path uses DynDNS mode with Basic Auth and remote IP", func(t *testing.T) {
+		defer SetDebug(false)
+		SetDebug(true) // Enable debug bypass
+
+		req := httptest.NewRequest("GET", "/api/autodns.cfm?id=test.example.com", nil)
+		req.SetBasicAuth("debug", "debug")
+		req.RemoteAddr = "203.0.113.10:4321"
+		w := httptest.NewRecorder()
+
+		handleDDNSUpdate(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if !strings.HasPrefix(response, "good") {
+			t.Fatalf("Expected response starting with 'good', got %q", response)
 		}
 	})
 }

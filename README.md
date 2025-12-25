@@ -23,7 +23,7 @@
 
 | 协议/服务商                         | 端点/端口                          | 认证方式                               | 关键参数 (别名)                                                | 响应示例                      |
 | ----------------------------------- | ----------------------------------- | -------------------------------------- | -------------------------------------------------------------- | ----------------------------- |
-| DynDNS / NIC / EasyDNS / Oray / DtDNS | `/`, `/update`, `/nic/update`       | Basic Auth 或 `user`/`pass`            | 域名：`hostname/host/domn/domain`；IP：`myip/ip/addr`           | `good <ip>` / `badauth` / `notfqdn` / `911` |
+| DynDNS / NIC / EasyDNS / Oray / DtDNS | `/`, `/update`, `/nic/update`, `/api/autodns.cfm` | Basic Auth 或 `user`/`pass`/`pw`       | 域名：`hostname/host/domn/domain/id`；IP：`myip/ip/addr`        | `good <ip>` / `badauth` / `notfqdn` / `911` |
 | GnuDIP HTTP                         | `/cgi-bin/gdipupdt.cgi`             | 两步：首请求返回 `time/sign`，二次 `md5(user:time:secret)` | `user/pass(sign)/domn/addr`；`reqc`=0/1/2；缺省 IP 用源地址    | 首次返回 meta；后续数字 `0/1/2` |
 | GnuDIP TCP                          | TCP 3495                            | MD5 challenge-response                 | 报文：`user:hash:domain:reqc:addr`                             | 数字 `0/1/2`                  |
 
@@ -31,15 +31,14 @@
 
 | 协议类 | API 路径/端口 | 认证 | 请求参数（名称=含义） | Response（典型） | 支持服务商 |
 |---|---|---|---|---|---|
-| DynDNS（DynDNS2 / NIC Update 族） | `/nic/update`（常见）；Oray 变体 `/ph/update`；3322 变体 `/dyndns/update` | HTTP Basic Auth 或 URL 内嵌 `user:pass` | `hostname`=FQDN（部分支持逗号多值）；`myip`=要设置 IP（可省略用源地址）；（3322 常见：`system`=更新系统类型） | `good <ip>` / `nochg <ip>` / `badauth` / `nohost` / `badagent` / `dnserr` / `911`（服务商略有差异） | DynDNS、No‑IP、DNS‑O‑Matic、Oray、3322(qDNS) |
+| DynDNS（DynDNS2 / NIC Update 族 / DtDNS） | `/nic/update`（常见）；Oray 变体 `/ph/update`；3322 变体 `/dyndns/update`；DtDNS `/api/autodns.cfm` | HTTP Basic Auth 或 URL 内嵌 `user:pass/pw` | `hostname/id/host/domain/domn`=FQDN（部分支持逗号多值）；`myip/ip`=要设置 IP（可省略用源地址）；（3322 常见：`system`=更新系统类型） | `good <ip>` / `nochg <ip>` / `badauth` / `nohost` / `badagent` / `dnserr` / `911`（服务商略有差异） | DynDNS、No‑IP、DNS‑O‑Matic、Oray、3322(qDNS)、DtDNS |
 | easyDNS（脚本端点） | `/dyn/tomato.php`，`/dyn/generic.php` | Query 凭据：`username`、`password` | `username`=账号；`password`=token；`hostname`=主机名；`myip`=IP | 兼容 DynDNS 响应 | easyDNS |
-| DtDNS（AutoDNS） | `/api/autodns.cfm` | Query 凭据：`pw`（明文，建议 HTTPS） | `id`=FQDN；`pw`=密码；`ip`=IP（可选，缺省取源地址）；`client`=标识（可选） | 兼容 DynDNS 响应（实现上沿用 DynDNS 模式） | DtDNS |
 
 **常用参数别名（不区分大小写）：**
 - 用户：`user`,`username`,`usr`,`name` 或 Basic Auth
-- 密码：`pass`,`password`,`pwd`
+- 密码：`pass`,`password`,`pwd`,`pw`
 - GnuDIP HTTP 签名：`sign`（用于基于挑战的签名字段，具体计算方式以服务端实现为准）
-- 域名：`hostname`,`host`,`domn`,`domain`
+- 域名：`hostname`,`host`,`domn`,`domain`,`id`
 - IP：`myip`,`ip`,`addr`（缺省时使用客户端源地址）
 - reqc（GnuDIP）：`0` 正常、`1` 离线(0.0.0.0)、`2` 使用源地址
 
