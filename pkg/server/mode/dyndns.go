@@ -9,20 +9,6 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
 )
 
-// DynMode handles DynDNS2/GnuDIP HTTP style requests.
-type DynMode struct {
-	numericResponse bool
-	debugLogf       func(format string, args ...interface{})
-}
-
-// NewDynMode creates a DynMode instance.
-func NewDynMode(numeric bool, debug func(format string, args ...interface{})) *DynMode {
-	return &DynMode{
-		numericResponse: numeric,
-		debugLogf:       debug,
-	}
-}
-
 // Prepare extracts credentials, domain and IP info from the HTTP request.
 func (m *DynMode) Prepare(r *http.Request) (*Request, Outcome) {
 	q := r.URL.Query()

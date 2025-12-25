@@ -54,7 +54,7 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 	if numericResponse {
 		m = mode.NewGnuHTTPMode(debugLogf)
 	} else {
-		m = mode.NewDynDNSMode(debugLogf)
+		m = mode.NewDynMode(false, debugLogf)
 	}
 	req, outcome := m.Prepare(r)
 	if outcome == mode.OutcomeSuccess {

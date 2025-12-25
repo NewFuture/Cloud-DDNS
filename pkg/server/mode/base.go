@@ -39,6 +39,19 @@ type Mode interface {
 	Respond(http.ResponseWriter, *Request, Outcome)
 }
 
+// DynMode holds shared DynDNS-like behaviour (DynDNS, DtDNS, EasyDNS, Oray).
+type DynMode struct {
+	numericResponse bool
+	debugLogf       func(format string, args ...interface{})
+}
+
+func NewDynMode(numeric bool, debug func(format string, args ...interface{})) *DynMode {
+	return &DynMode{
+		numericResponse: numeric,
+		debugLogf:       debug,
+	}
+}
+
 // Helpers shared by multiple modes.
 func preferValue(primary, fallback string) string {
 	if primary != "" {
