@@ -14,7 +14,15 @@ func NewEasyDNSMode(debug func(format string, args ...interface{})) Mode {
 	return &EasyDNSMode{DynMode: NewDynMode(false, debug)}
 }
 
-// Respond writes EasyDNS-specific result codes.
+// Respond writes EasyDNS dynamic DNS result codes as plain-text responses.
+// It implements the EasyDNS API contract by mapping internal outcomes to
+// EasyDNS result strings:
+//   - OutcomeSuccess       -> "NOERROR"
+//   - OutcomeAuthFailure   -> "NOACCESS"
+//   - OutcomeInvalidDomain -> "ILLEGAL INPUT"
+//   - OutcomeSystemError   -> "NOSERVICE"
+//   - any other outcome    -> "NOSERVICE"
+// For protocol details, see the EasyDNS dynamic DNS API documentation.
 func (m *EasyDNSMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) {
 	var body string
 	switch outcome {
