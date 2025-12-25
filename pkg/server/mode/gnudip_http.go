@@ -31,11 +31,6 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	timeParam := GetQueryParam(q, "time")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
 
-	if domain == "" || len(domain) < 3 || len(domain) > 253 {
-		log.Printf("Invalid domain: %q", domain)
-		return &Request{}, OutcomeInvalidDomain
-	}
-
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
 	if err != nil {
@@ -51,6 +46,16 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Reqc:       reqc,
 		RemoteAddr: r.RemoteAddr,
 		Time:       timeParam,
+	}
+
+	if pass == "" {
+		m.debugLogf("GnuHTTP handshake prepare user=%s domain=%s ip=%s time=%s remote=%s", user, domain, resolvedIP, timeParam, r.RemoteAddr)
+		return req, OutcomeSuccess
+	}
+
+	if domain == "" || len(domain) < 3 || len(domain) > 253 {
+		log.Printf("Invalid domain: %q", domain)
+		return req, OutcomeInvalidDomain
 	}
 
 	m.debugLogf("GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s", user, domain, resolvedIP, timeParam, r.RemoteAddr)
