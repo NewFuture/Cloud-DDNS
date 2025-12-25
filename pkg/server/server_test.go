@@ -126,6 +126,65 @@ func TestIPExtraction(t *testing.T) {
 	}
 }
 
+func TestResolveRequestIP(t *testing.T) {
+	tests := []struct {
+		name       string
+		reqc       int
+		providedIP string
+		remoteAddr string
+		wantIP     string
+		wantErr    bool
+	}{
+		{
+			name:       "reqc update uses provided IP",
+			reqc:       0,
+			providedIP: "1.2.3.4",
+			remoteAddr: "10.0.0.1:1234",
+			wantIP:     "1.2.3.4",
+		},
+		{
+			name:       "reqc update falls back to remote",
+			reqc:       0,
+			providedIP: "",
+			remoteAddr: "10.0.0.1:1234",
+			wantIP:     "10.0.0.1",
+		},
+		{
+			name:       "reqc offline forces zero IP",
+			reqc:       1,
+			providedIP: "8.8.8.8",
+			remoteAddr: "10.0.0.1:1234",
+			wantIP:     "0.0.0.0",
+		},
+		{
+			name:       "reqc auto-detect uses remote",
+			reqc:       2,
+			providedIP: "8.8.8.8",
+			remoteAddr: "203.0.113.10:5678",
+			wantIP:     "203.0.113.10",
+		},
+		{
+			name:       "invalid remote returns error",
+			reqc:       2,
+			providedIP: "",
+			remoteAddr: "invalid-remote",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ip, err := resolveRequestIP(tt.reqc, tt.providedIP, tt.remoteAddr)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("resolveRequestIP error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && ip != tt.wantIP {
+				t.Fatalf("resolveRequestIP() = %s, want %s", ip, tt.wantIP)
+			}
+		})
+	}
+}
+
 func TestProtocolMessageParsing(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -626,6 +685,7 @@ func TestHTTPServerIntegration(t *testing.T) {
 
 	// Create a test HTTP handler using the actual handleDDNSUpdate
 	handler := http.HandlerFunc(handleDDNSUpdate)
+	cgiHandler := http.HandlerFunc(handleCGIUpdate)
 
 	t.Run("Successful request with explicit IP", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/?user=testuser&pass=testpass&domn=test.example.com&addr=1.2.3.4", nil)
@@ -793,6 +853,56 @@ func TestHTTPServerIntegration(t *testing.T) {
 		// Will return "911" because provider credentials are invalid (test credentials)
 		if response != "911" && !strings.HasPrefix(response, "good ") {
 			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
+		}
+	})
+
+	t.Run("CGI path returns numeric codes for update", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&addr=1.2.3.4&reqc=0", nil)
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "0" && response != "1" {
+			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
+		}
+	})
+
+	t.Run("CGI path handles offline reqc", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&reqc=1", nil)
+		req.RemoteAddr = "10.20.30.40:2345"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "0" && response != "1" && response != "2" {
+			t.Errorf("Expected numeric response, got '%s'", response)
+		}
+	})
+
+	t.Run("CGI path auto-detects IP when missing", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&reqc=2", nil)
+		req.RemoteAddr = "192.0.2.10:4567"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "0" && response != "1" {
+			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
 		}
 	})
 }

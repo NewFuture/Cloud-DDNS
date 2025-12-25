@@ -116,6 +116,7 @@ az containerapp create \
 - `/` （根路径）
 - `/update`
 - `/nic/update`
+- `/cgi-bin/gdipupdt.cgi`（返回数字响应 0/1/2，支持 reqc 模式）
 
 **支持的参数别名（不区分大小写）：**
 - 域名：`hostname`, `host`, `domn`, `domain`
@@ -142,6 +143,11 @@ az containerapp create \
 - 认证失败：`badauth`
 - 域名无效：`notfqdn`
 - 系统错误：`911`
+
+**Reqc 模式（GnuDIP）：**
+- `reqc=0`（默认）：按请求 IP 更新；IP 为空时使用客户端源地址
+- `reqc=1`：离线模式，记录更新为 `0.0.0.0`，CGI 路径成功时返回数字 `2`
+- `reqc=2`：自动检测模式，忽略传入 IP，始终使用客户端源地址
 
 #### HTTP 方式调用示例
 
@@ -323,6 +329,7 @@ This service is fully compatible with GnuDIP protocol implementations in Huawei,
 - `/` (root path)
 - `/update`
 - `/nic/update`
+- `/cgi-bin/gdipupdt.cgi` (returns numeric responses 0/1/2 with reqc support)
 
 **Supported Parameter Aliases (case-insensitive):**
 - Domain: `hostname`, `host`, `domn`, `domain`
@@ -349,6 +356,11 @@ This ensures compatibility with various optical modem/router password transmissi
 - Authentication failed: `badauth`
 - Invalid domain: `notfqdn`
 - System error: `911`
+
+**Reqc Modes (GnuDIP):**
+- `reqc=0` (default): update using provided IP; when absent, the client source IP is used
+- `reqc=1`: offline mode updates the record to `0.0.0.0`; CGI path returns numeric `2` on success
+- `reqc=2`: auto-detect mode ignores the provided IP and always uses the client source IP
 
 #### HTTP Method Examples
 
