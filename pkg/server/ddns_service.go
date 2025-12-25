@@ -20,7 +20,7 @@ type DDNSRequest struct {
 	RemoteAddr      string
 }
 
-// DDNSService defines the behaviour needed by protocol frontends to process DDNS updates.
+// DDNSService defines the behavior needed by protocol frontends to process DDNS updates.
 type DDNSService interface {
 	PrepareHTTPRequest(r *http.Request, numeric bool) (*DDNSRequest, responseOutcome)
 	Process(req *DDNSRequest) responseOutcome
