@@ -88,8 +88,6 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 		switch r.URL.Path {
 		case "/dyn/generic.php", "/dyn/tomato.php", "/dyn/ez-ipupdate.php":
 			m = mode.NewEasyDNSMode(debugLogf)
-		case "/api/autodns.cfm":
-			m = mode.NewDtDNSMode(debugLogf)
 		default:
 			debugLogf("Unmatched HTTP path=%s method=%s defaulting to DynDNS mode", r.URL.Path, r.Method)
 			m = mode.NewDynMode(false, debugLogf)
