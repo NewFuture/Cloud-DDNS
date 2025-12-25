@@ -36,7 +36,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
 	authPresent := q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
-	isHandshake := !authPresent
+	isHandshake := !authPresent && user != ""
 
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
