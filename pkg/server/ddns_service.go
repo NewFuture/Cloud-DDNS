@@ -32,6 +32,13 @@ func newDefaultDDNSService() DDNSService {
 	return &defaultDDNSService{}
 }
 
+func preferValue(primary, fallback string) string {
+	if primary != "" {
+		return primary
+	}
+	return fallback
+}
+
 // PrepareHTTPRequest extracts credentials, domain and IP information from an HTTP request.
 // It supports both HTTP Basic Auth and URL query parameters, resolves missing IPs using RemoteAddr,
 // and validates domain/IP formats before handing off to the provider layer.
@@ -42,14 +49,8 @@ func (s *defaultDDNSService) PrepareHTTPRequest(r *http.Request, numeric bool) (
 	queryUser := getQueryParam(q, "user", "username", "usr", "name")
 	queryPass := getQueryParam(q, "pass", "password", "pwd")
 
-	username := headerUser
-	if username == "" {
-		username = queryUser
-	}
-	password := headerPass
-	if password == "" {
-		password = queryPass
-	}
+	username := preferValue(headerUser, queryUser)
+	password := preferValue(headerPass, queryPass)
 
 	domain := getQueryParam(q, "domn", "domain", "hostname", "host")
 	ip := getQueryParam(q, "addr", "myip", "ip")
@@ -92,6 +93,7 @@ func (s *defaultDDNSService) PrepareHTTPRequest(r *http.Request, numeric bool) (
 
 // Process authenticates the user and executes the provider update.
 func (s *defaultDDNSService) Process(req *DDNSRequest) responseOutcome {
+	// Defensive guard for unexpected callers; HTTP handlers always supply a request from PrepareHTTPRequest.
 	if req == nil {
 		return responseSystemError
 	}
