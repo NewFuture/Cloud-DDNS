@@ -13,16 +13,16 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
 )
 
-// GnuTCMode handles GnuDIP TCP protocol.
-type GnuTCMode struct {
+// GnuTCPMode handles GnuDIP TCP protocol.
+type GnuTCPMode struct {
 	debugLogf func(format string, args ...interface{})
 }
 
-func NewGnuTCPMode(debug func(format string, args ...interface{})) *GnuTCMode {
-	return &GnuTCMode{debugLogf: debug}
+func NewGnuTCPMode(debug func(format string, args ...interface{})) *GnuTCPMode {
+	return &GnuTCPMode{debugLogf: debug}
 }
 
-func (m *GnuTCMode) Handle(conn net.Conn) {
+func (m *GnuTCPMode) Handle(conn net.Conn) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
