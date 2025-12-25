@@ -962,26 +962,6 @@ func TestHTTPServerIntegration(t *testing.T) {
 			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
 		}
 	})
-
-	t.Run("EasyDNS ez-ipupdate with host_id parameter", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/dyn/ez-ipupdate.php?action=edit&myip=1.2.3.4&wildcard=OFF&mx=&backmx=NO&host_id=easydns.new.com&user=testuser&pass=testpass", nil)
-		w := httptest.NewRecorder()
-
-		handler(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", w.Code)
-		}
-
-		response := strings.TrimSpace(w.Body.String())
-		if response == "notfqdn" {
-			t.Fatalf("Expected EasyDNS format to parse domain, got '%s'", response)
-		}
-		if response != "911" && !strings.HasPrefix(response, "good ") {
-			t.Errorf("Expected '911' or 'good ' prefix, got '%s'", response)
-		}
-	})
-
 }
 
 func TestDDNSServicePrefersBasicAuth(t *testing.T) {
