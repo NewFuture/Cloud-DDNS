@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 // Outcome represents the result of a mode processing step.
@@ -43,6 +45,7 @@ type Request struct {
 	RemoteAddr string
 	Time       string
 	Salt       string
+	Sign       string
 }
 
 // Mode defines a protocol handler that can prepare, process, and respond to a DDNS HTTP request.
@@ -177,4 +180,16 @@ func ResolveRequestIP(reqc int, providedIP, remote string) (string, error) {
 func GetQueryParam(q map[string][]string, names ...string) string { return getQueryParam(q, names...) }
 func VerifyPassword(storedPassword, inputPassword string) bool {
 	return verifyPassword(storedPassword, inputPassword)
+}
+
+func fallbackSalt(length int) string {
+	if length <= 0 {
+		return ""
+	}
+	hash := md5.Sum([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
+	hexStr := hex.EncodeToString(hash[:])
+	if len(hexStr) < length {
+		return hexStr
+	}
+	return hexStr[:length]
 }

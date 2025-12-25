@@ -34,8 +34,7 @@ func (m *GnuTCPMode) Handle(conn net.Conn) {
 
 	salt := generateSalt(10)
 	if salt == "" {
-		now := time.Now().UnixNano()
-		salt = fmt.Sprintf("%010d", now)[:10]
+		salt = fallbackSalt(10)
 	}
 	m.debugLogf("Generated salt %s for %s", salt, conn.RemoteAddr().String())
 	if _, err := conn.Write([]byte(salt + "\n")); err != nil {

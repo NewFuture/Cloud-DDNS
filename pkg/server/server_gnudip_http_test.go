@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/md5"
 	"fmt"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -98,6 +99,27 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 	})
 
+	t.Run("GnuDIP HTTP second step with salt but wrong sign fails", func(t *testing.T) {
+		timeParam := "1234567890"
+		salt := "abcdefghij"
+		inner := md5.Sum([]byte("testpass"))
+		pass := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, salt))))
+		req := httptest.NewRequest("GET", fmt.Sprintf("/nic/update?user=testuser&domn=test.example.com&time=%s&sign=deadbeef&salt=%s&pass=%s&addr=1.2.3.4", timeParam, salt, pass), nil)
+		req.RemoteAddr = "203.0.113.10:4321"
+		w := httptest.NewRecorder()
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "1" {
+			t.Fatalf("Expected auth failure numeric '1', got '%s'", response)
+		}
+	})
+
 	t.Run("CGI path returns numeric codes for update", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&addr=1.2.3.4&reqc=0", nil)
 		w := httptest.NewRecorder()
@@ -161,5 +183,5 @@ func getMetaContent(body, name string) string {
 	if end == -1 {
 		return ""
 	}
-	return body[start : start+end]
+	return html.UnescapeString(body[start : start+end])
 }

@@ -30,11 +30,13 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 
 	user := GetQueryParam(q, "user", "username")
 	domain := GetQueryParam(q, "domn", "domain", "hostname", "host")
-	pass := GetQueryParam(q, "pass", "password", "pwd", "sign")
+	pass := GetQueryParam(q, "pass", "password", "pwd")
+	sign := GetQueryParam(q, "sign")
 	timeParam := GetQueryParam(q, "time")
 	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
-	isHandshake := pass == ""
+	authPresent := q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
+	isHandshake := !authPresent
 
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
@@ -52,9 +54,10 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		RemoteAddr: r.RemoteAddr,
 		Time:       timeParam,
 		Salt:       salt,
+		Sign:       sign,
 	}
 
-	if !isHandshake && (domain == "" || len(domain) < 3 || len(domain) > 253) {
+	if (!isHandshake && domain == "") || (domain != "" && (len(domain) < 3 || len(domain) > 253)) {
 		log.Printf("Invalid domain: %q", domain)
 		return req, OutcomeInvalidDomain
 	}
@@ -85,22 +88,34 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 	}
 
 	if req.Salt != "" {
+		if (req.Sign != "" && req.Time == "") || (req.Sign == "" && req.Time != "") {
+			return OutcomeAuthFailure
+		}
+		if req.Sign != "" {
+			expectedSign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", req.Username, req.Time, u.Password))))
+			if req.Sign != expectedSign {
+				return OutcomeAuthFailure
+			}
+		}
 		inner := md5.Sum([]byte(u.Password))
 		expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, req.Salt))))
 		if req.Password != expected {
 			return OutcomeAuthFailure
 		}
 	} else {
-		if req.Time != "" {
+		if req.Time != "" || req.Sign != "" {
+			if req.Time == "" {
+				return OutcomeAuthFailure
+			}
 			expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", req.Username, req.Time, u.Password))))
+			if req.Sign != "" && req.Sign != expected {
+				return OutcomeAuthFailure
+			}
 			if req.Password != expected {
 				return OutcomeAuthFailure
 			}
-		} else {
-			// Validate hashed or plaintext using helpers
-			if !verifyPassword(u.Password, req.Password) {
-				return OutcomeAuthFailure
-			}
+		} else if !verifyPassword(u.Password, req.Password) {
+			return OutcomeAuthFailure
 		}
 	}
 
@@ -132,6 +147,9 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 			return
 		}
 		salt := generateSalt(10)
+		if salt == "" {
+			salt = fallbackSalt(10)
+		}
 		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
 		body := fmt.Sprintf(`<html><head>
 <meta name="salt" content="%s">
