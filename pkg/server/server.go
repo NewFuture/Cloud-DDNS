@@ -63,6 +63,7 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 			m = mode.NewDynMode(false, debugLogf)
 		}
 	}
+	debugLogf("Selected mode for path %s: %T", r.URL.Path, m)
 	req, outcome := m.Prepare(r)
 	if outcome == mode.OutcomeSuccess {
 		outcome = m.Process(req)
