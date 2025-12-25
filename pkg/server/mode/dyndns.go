@@ -105,7 +105,11 @@ func (m *DynMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) 
 				body = "0"
 			}
 		} else {
-			body = "good " + req.IP
+			if req != nil && req.IP != "" {
+				body = "good " + req.IP
+			} else {
+				body = "good"
+			}
 		}
 	case OutcomeAuthFailure:
 		if m.numericResponse {
