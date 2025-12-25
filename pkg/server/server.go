@@ -54,7 +54,14 @@ func handleDDNSUpdateWithMode(w http.ResponseWriter, r *http.Request, numericRes
 	if numericResponse {
 		m = mode.NewGnuHTTPMode(debugLogf)
 	} else {
-		m = mode.NewDynMode(false, debugLogf)
+		switch r.URL.Path {
+		case "/dyn/generic.php", "/dyn/tomato.php":
+			m = mode.NewEasyDNSMode(debugLogf)
+		case "/api/autodns.cfm":
+			m = mode.NewDtDNSMode(debugLogf)
+		default:
+			m = mode.NewDynMode(false, debugLogf)
+		}
 	}
 	req, outcome := m.Prepare(r)
 	if outcome == mode.OutcomeSuccess {
