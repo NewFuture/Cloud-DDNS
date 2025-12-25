@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
 
 // Outcome represents the result of a mode processing step.
@@ -20,6 +21,17 @@ const (
 	OutcomeInvalidDomain
 	OutcomeSystemError
 )
+
+var debugMode atomic.Bool
+
+// SetDebugMode toggles debug behaviours across modes.
+func SetDebugMode(enabled bool) {
+	debugMode.Store(enabled)
+}
+
+func isDebugMode() bool {
+	return debugMode.Load()
+}
 
 // Request holds normalized DDNS parameters.
 type Request struct {
