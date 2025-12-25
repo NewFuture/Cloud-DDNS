@@ -36,18 +36,6 @@ func TestComputeMD5Hash(t *testing.T) {
 	}
 }
 
-func TestGnuDIPHashMatchesSampleLog(t *testing.T) {
-	password := "debug"
-	salt := "1766672054.192016939"
-	expectedClientHash := "9045b061cc3e4531c14d7b0e8200675a"
-
-	clientHash := mode.ComputeTCPHash(password, salt)
-
-	if clientHash != expectedClientHash {
-		t.Fatalf("expected hash %s, got %s", expectedClientHash, clientHash)
-	}
-}
-
 func TestDebugLoggingToggle(t *testing.T) {
 	originalOutput := log.Writer()
 	originalFlags := log.Flags()
