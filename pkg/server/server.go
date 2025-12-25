@@ -116,7 +116,7 @@ func StartHTTP(port int) {
 	http.HandleFunc("/ph/update", handleDDNSUpdate)       // Oray
 	http.HandleFunc("/dyn/generic.php", handleDDNSUpdate) // easyDNS
 	http.HandleFunc("/dyn/tomato.php", handleDDNSUpdate)  // easyDNS
-	http.HandleFunc("/dyn/ez-ipupdate.php", handleDDNSUpdate)
+	http.HandleFunc("/dyn/ez-ipupdate.php", handleDDNSUpdate) // easyDNS
 	http.HandleFunc("/api/autodns.cfm", handleDDNSUpdate) // DtDNS
 	http.HandleFunc("/cgi-bin/gdipupdt.cgi", handleCGIUpdate)
 	http.HandleFunc("/", handleDDNSUpdate)
