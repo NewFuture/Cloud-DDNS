@@ -119,19 +119,20 @@ func handleCGIUpdate(w http.ResponseWriter, r *http.Request) {
 func shouldUseGnuHTTPMode(r *http.Request) bool {
 	q := r.URL.Query()
 
-	if q.Get("time") != "" || q.Get("sign") != "" {
+	hasSign := q.Get("sign") != ""
+	if q.Get("time") != "" || hasSign {
 		return true
 	}
 
 	headerUser, headerPass, basicAuthProvided := r.BasicAuth()
 	queryUser := mode.GetQueryParam(q, "user", "username")
-	queryPass := mode.GetQueryParam(q, "pass", "password", "pwd", "sign")
+	queryPass := mode.GetQueryParam(q, "pass", "password", "pwd")
 
-	if basicAuthProvided && headerUser != "" && headerPass == "" && queryPass == "" {
+	if basicAuthProvided && headerUser != "" && headerPass == "" && queryPass == "" && !hasSign {
 		return true
 	}
 
-	if queryUser != "" && queryPass == "" && !basicAuthProvided {
+	if queryUser != "" && queryPass == "" && !basicAuthProvided && !hasSign {
 		return true
 	}
 

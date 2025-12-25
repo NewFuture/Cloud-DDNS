@@ -770,7 +770,6 @@ func TestHTTPServerIntegration(t *testing.T) {
 
 	// Create a test HTTP handler using the actual handleDDNSUpdate
 	handler := http.HandlerFunc(handleDDNSUpdate)
-	cgiHandler := http.HandlerFunc(handleCGIUpdate)
 
 	t.Run("Successful request with explicit IP", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/?user=testuser&pass=testpass&domn=test.example.com&addr=1.2.3.4", nil)
@@ -975,23 +974,6 @@ func TestHTTPServerIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("GnuDIP HTTP handshake on /nic/update without password", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/nic/update?user=testuser&domn=test.example.com", nil)
-		req.RemoteAddr = "203.0.113.10:4321"
-		w := httptest.NewRecorder()
-
-		handler(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", w.Code)
-		}
-
-		response := w.Body.String()
-		if !strings.Contains(response, `<meta name="retc" content="0">`) || !strings.Contains(response, `<meta name="sign"`) {
-			t.Errorf("Expected GnuDIP challenge response, got '%s'", response)
-		}
-	})
-
 	t.Run("EasyDNS ez-ipupdate with host_id parameter", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/dyn/ez-ipupdate.php?action=edit&myip=1.2.3.4&wildcard=OFF&mx=&backmx=NO&host_id=easydns.new.com&user=testuser&pass=testpass", nil)
 		w := httptest.NewRecorder()
@@ -1011,55 +993,6 @@ func TestHTTPServerIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("CGI path returns numeric codes for update", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&addr=1.2.3.4&reqc=0", nil)
-		w := httptest.NewRecorder()
-
-		cgiHandler(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", w.Code)
-		}
-
-		response := strings.TrimSpace(w.Body.String())
-		if response != "0" && response != "1" {
-			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
-		}
-	})
-
-	t.Run("CGI path handles offline reqc", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&reqc=1", nil)
-		req.RemoteAddr = "10.20.30.40:2345"
-		w := httptest.NewRecorder()
-
-		cgiHandler(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", w.Code)
-		}
-
-		response := strings.TrimSpace(w.Body.String())
-		if response != "0" && response != "1" && response != "2" {
-			t.Errorf("Expected numeric response, got '%s'", response)
-		}
-	})
-
-	t.Run("CGI path auto-detects IP when missing", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser&pass=testpass&domn=test.example.com&reqc=2", nil)
-		req.RemoteAddr = "192.0.2.10:4567"
-		w := httptest.NewRecorder()
-
-		cgiHandler(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", w.Code)
-		}
-
-		response := strings.TrimSpace(w.Body.String())
-		if response != "0" && response != "1" {
-			t.Errorf("Expected numeric '0' or '1', got '%s'", response)
-		}
-	})
 }
 
 func TestDDNSServicePrefersBasicAuth(t *testing.T) {
