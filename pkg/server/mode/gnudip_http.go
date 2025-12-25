@@ -57,9 +57,11 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Sign:       sign,
 	}
 
-	if (!isHandshake && domain == "") || (domain != "" && (len(domain) < 3 || len(domain) > 253)) {
-		log.Printf("Invalid domain: %q", domain)
-		return req, OutcomeInvalidDomain
+	if !isHandshake {
+		if domain == "" || len(domain) < 3 || len(domain) > 253 {
+			log.Printf("Invalid domain: %q", domain)
+			return req, OutcomeInvalidDomain
+		}
 	}
 
 	logMsg := "GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s"
@@ -156,7 +158,7 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 <meta name="time" content="%d">
 <meta name="sign" content="%s">
 <meta name="addr" content="%s">
-</head><body></body></html>`, html.EscapeString(salt), now, html.EscapeString(sign), html.EscapeString(req.IP))
+</head><body></body></html>`, html.EscapeString(salt), now, sign, html.EscapeString(req.IP))
 		if _, err := w.Write([]byte(body)); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}

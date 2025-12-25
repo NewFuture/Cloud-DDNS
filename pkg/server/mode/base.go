@@ -44,8 +44,10 @@ type Request struct {
 	Reqc       int
 	RemoteAddr string
 	Time       string
-	Salt       string
-	Sign       string
+	// Salt is the cryptographic salt for GnuDIP authentication.
+	Salt string
+	// Sign is the MD5 signature for challenge-response authentication.
+	Sign string
 }
 
 // Mode defines a protocol handler that can prepare, process, and respond to a DDNS HTTP request.
