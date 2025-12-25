@@ -25,9 +25,11 @@
 - ✅ **Docker 支持**：提供 Docker 镜像，快速部署
 ### 支持的 DDNS 协议 / 服务商
 
-- **DynDNS / NIC Update / EasyDNS / Oray / DtDNS**：`/`, `/update`, `/nic/update`（参数同 DynDNS，Basic Auth 或 URL 参数）
-- **GnuDIP HTTP**：`/cgi-bin/gdipupdt.cgi`，两步认证（首请求返回 meta retc/time/sign，二次校验 `md5(user:time:secret)`，返回数字 0/1/2）
-- **GnuDIP TCP**：标准 3495 端口，MD5 challenge-response
+| 协议/服务商                         | 端点/端口                          | 认证方式                               | 关键参数 (别名)                                                | 响应示例                      |
+| ----------------------------------- | ----------------------------------- | -------------------------------------- | -------------------------------------------------------------- | ----------------------------- |
+| DynDNS / NIC / EasyDNS / Oray / DtDNS | `/`, `/update`, `/nic/update`       | Basic Auth 或 `user`/`pass`            | 域名：`hostname/host/domn/domain`；IP：`myip/ip/addr`           | `good <ip>` / `badauth` / `notfqdn` / `911` |
+| GnuDIP HTTP                         | `/cgi-bin/gdipupdt.cgi`             | 两步：首请求返回 `time/sign`，二次 `md5(user:time:secret)` | `user/pass(sign)/domn/addr`；`reqc`=0/1/2；缺省 IP 用源地址    | 首次返回 meta；后续数字 `0/1/2` |
+| GnuDIP TCP                          | TCP 3495                            | MD5 challenge-response                 | 报文：`user:hash:domain:reqc:addr`                             | 数字 `0/1/2`                  |
 
 **常用参数别名（不区分大小写）：**
 - 用户：`user`,`username`,`usr`,`name` 或 Basic Auth
@@ -35,11 +37,6 @@
 - 域名：`hostname`,`host`,`domn`,`domain`
 - IP：`myip`,`ip`,`addr`（缺省时使用客户端源地址）
 - reqc（GnuDIP）：`0` 正常、`1` 离线(0.0.0.0)、`2` 使用源地址
-
-**响应格式概览：**
-- DynDNS/EasyDNS/DtDNS/Oray：`good <ip>` / `nochg <ip>` / `badauth` / `notfqdn` / `911`
-- GnuDIP HTTP：数字 `0/1/2`；首请求无 pass 返回 meta
-- GnuDIP TCP：数字 `0/1/2`
 
 ### 快速开始
 
