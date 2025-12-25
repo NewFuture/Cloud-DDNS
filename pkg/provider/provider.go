@@ -19,6 +19,8 @@ func GetProvider(u *config.UserConfig) (Provider, error) {
 		return NewAliyunProvider(u.Username, u.Password), nil
 	case "tencent":
 		return NewTencentProvider(u.Username, u.Password), nil
+	case "nowdns":
+		return NewNowDNSProvider(u.Username, u.Password), nil
 	// 扩展其他厂商...
 	default:
 		return nil, errors.New("unknown provider: " + u.Provider)
