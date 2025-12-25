@@ -45,7 +45,7 @@ func preferValue(primary, fallback string) string {
 func (s *defaultDDNSService) PrepareHTTPRequest(r *http.Request, numeric bool) (*DDNSRequest, responseOutcome) {
 	q := r.URL.Query()
 
-	headerUser, headerPass, _ := r.BasicAuth()
+	headerUser, headerPass, basicAuthProvided := r.BasicAuth()
 	queryUser := getQueryParam(q, "user", "username", "usr", "name")
 	queryPass := getQueryParam(q, "pass", "password", "pwd")
 
@@ -87,17 +87,13 @@ func (s *defaultDDNSService) PrepareHTTPRequest(r *http.Request, numeric bool) (
 		RemoteAddr:      r.RemoteAddr,
 	}
 
+	debugLogf("Credential source basicAuth=%t user=%s queryUser=%s", basicAuthProvided, headerUser, queryUser)
 	debugLogf("Prepared DDNSRequest user=%s domain=%s ip=%s reqc=%d numeric=%t remote=%s", username, domain, resolvedIP, reqc, numeric, r.RemoteAddr)
 	return req, responseSuccess
 }
 
 // Process authenticates the user and executes the provider update.
 func (s *defaultDDNSService) Process(req *DDNSRequest) responseOutcome {
-	// Defensive guard for unexpected callers; HTTP handlers always supply a request from PrepareHTTPRequest.
-	if req == nil {
-		return responseSystemError
-	}
-
 	u := config.GetUser(req.Username)
 	if u == nil || !verifyPassword(u.Password, req.Password) {
 		log.Printf("Authentication failed for user: %q", req.Username)

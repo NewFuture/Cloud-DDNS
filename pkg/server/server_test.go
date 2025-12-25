@@ -706,7 +706,7 @@ func TestHTTPServerIntegration(t *testing.T) {
 	})
 
 	t.Run("Successful request using Basic Auth", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/?domn=test.example.com&addr=1.2.3.4", nil)
+		req := httptest.NewRequest("GET", "/?domain=test.example.com&addr=1.2.3.4", nil)
 		req.SetBasicAuth("testuser", "testpass")
 		w := httptest.NewRecorder()
 
