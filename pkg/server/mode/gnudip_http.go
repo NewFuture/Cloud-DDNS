@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	mathrand "math/rand"
 	"net/http"
 	"time"
 
@@ -169,10 +168,8 @@ func generateSalt(length int) string {
 	}
 	buf := make([]byte, length)
 	if _, err := rand.Read(buf); err != nil {
-		mathrand.Seed(time.Now().UnixNano())
-		for i := range buf {
-			buf[i] = byte(mathrand.Intn(len(charset)))
-		}
+		log.Printf("crypto/rand failed generating salt: %v", err)
+		return ""
 	}
 	for i, b := range buf {
 		buf[i] = charset[int(b)%len(charset)]
