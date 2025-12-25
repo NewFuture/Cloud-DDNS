@@ -41,8 +41,8 @@ pkg/
 3. **Server Module** (`pkg/server/`)
    - GnuDIP protocol TCP server with MD5 challenge-response
    - HTTP simple mode with query parameters **and Basic Auth fallback**
-   - `DDNSService` front layer (`ddns_service.go`) standardizes parameters, resolves missing IPs from RemoteAddr, validates domain/IP, performs authentication, and delegates to providers
-   - Files: `server.go`, `ddns_service.go`, `server_test.go`
+   - Mode-based request handling in `pkg/server/mode/`: a `Mode` interface standardizes parameters, resolves missing IPs from RemoteAddr, validates domain/IP, performs authentication, and delegates to providers via protocol-specific implementations (e.g., `base.go`, `dyndns.go`, etc.)
+   - Files: `server.go`, `mode/base.go`, `mode/dyndns.go`, `server_test.go`
 
 4. **Main Entry** (`main.go`)
    - Initializes configuration from `config.yaml`
