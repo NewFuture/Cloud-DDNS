@@ -2,6 +2,7 @@ package mode
 
 import (
 	"crypto/md5"
+	"crypto/rand"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,6 +30,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	domain := GetQueryParam(q, "domn", "domain", "hostname", "host")
 	pass := GetQueryParam(q, "pass", "password", "pwd", "sign")
 	timeParam := GetQueryParam(q, "time")
+	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
 	isHandshake := pass == ""
 
@@ -47,6 +49,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Reqc:       reqc,
 		RemoteAddr: r.RemoteAddr,
 		Time:       timeParam,
+		Salt:       salt,
 	}
 
 	if !isHandshake && (domain == "" || len(domain) < 3 || len(domain) > 253) {
@@ -79,15 +82,23 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
-	if req.Time != "" {
-		expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", req.Username, req.Time, u.Password))))
+	if req.Salt != "" {
+		inner := md5.Sum([]byte(u.Password))
+		expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, req.Salt))))
 		if req.Password != expected {
 			return OutcomeAuthFailure
 		}
 	} else {
-		// Validate hashed or plaintext using helpers
-		if !verifyPassword(u.Password, req.Password) {
-			return OutcomeAuthFailure
+		if req.Time != "" {
+			expected := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", req.Username, req.Time, u.Password))))
+			if req.Password != expected {
+				return OutcomeAuthFailure
+			}
+		} else {
+			// Validate hashed or plaintext using helpers
+			if !verifyPassword(u.Password, req.Password) {
+				return OutcomeAuthFailure
+			}
 		}
 	}
 
@@ -118,8 +129,14 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 			}
 			return
 		}
+		salt := generateSalt(10)
 		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
-		body := fmt.Sprintf(`<html><head><meta name="retc" content="0"><meta name="time" content="%d"><meta name="sign" content="%s"><meta name="addr" content="%s"></head><body></body></html>`, now, sign, req.IP)
+		body := fmt.Sprintf(`<html><head>
+<meta name="salt" content="%s">
+<meta name="time" content="%d">
+<meta name="sign" content="%s">
+<meta name="addr" content="%s">
+</head><body></body></html>`, salt, now, sign, req.IP)
 		if _, err := w.Write([]byte(body)); err != nil {
 			log.Printf("HTTP Write Error: %v", err)
 		}
@@ -142,4 +159,22 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 	if _, err := w.Write([]byte(body)); err != nil {
 		log.Printf("HTTP Write Error: %v", err)
 	}
+}
+
+func generateSalt(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	if length <= 0 {
+		return ""
+	}
+	buf := make([]byte, length)
+	if _, err := rand.Read(buf); err != nil {
+		for i := range buf {
+			buf[i] = charset[int(time.Now().UnixNano()+int64(i))%len(charset)]
+		}
+		return string(buf)
+	}
+	for i, b := range buf {
+		buf[i] = charset[int(b)%len(charset)]
+	}
+	return string(buf)
 }

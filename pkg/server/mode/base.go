@@ -42,6 +42,7 @@ type Request struct {
 	Reqc       int
 	RemoteAddr string
 	Time       string
+	Salt       string
 }
 
 // Mode defines a protocol handler that can prepare, process, and respond to a DDNS HTTP request.
