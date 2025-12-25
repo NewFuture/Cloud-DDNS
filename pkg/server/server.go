@@ -65,6 +65,29 @@ func StartTCP(port int) {
 	}
 }
 
+// StartOrayTCP starts the Oray TCP listener.
+func StartOrayTCP(port int) {
+	if port == 0 {
+		// Oray TCP is optional, skip if port not configured
+		return
+	}
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatalf("Oray TCP Listen Error: %v", err)
+	}
+	log.Printf("Oray TCP Server listening on :%d", port)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Oray TCP Accept Error: %v", err)
+			continue
+		}
+		debugLogf("Accepted Oray TCP connection from %s", conn.RemoteAddr().String())
+		go mode.NewOrayTCPMode(debugLogf).Handle(conn)
+	}
+}
+
 // handleDDNSUpdate handles DDNS update requests (compatible with optical modem/router clients).
 func handleDDNSUpdate(w http.ResponseWriter, r *http.Request) {
 	handleDDNSUpdateWithMode(w, r, false)

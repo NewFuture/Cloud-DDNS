@@ -1,6 +1,7 @@
 server:
-  tcp_port: 3495   # GnuDIP 标准端口
-  http_port: 8080  # HTTP 兼容端口
+  tcp_port: 3495       # GnuDIP 标准端口
+  http_port: 8080      # HTTP 兼容端口
+  oray_tcp_port: 6060  # Oray TCP 端口（可选，设置为 0 禁用）
 
 users:
   # 阿里云用户示例
