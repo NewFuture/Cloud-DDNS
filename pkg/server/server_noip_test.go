@@ -91,6 +91,8 @@ func TestNoIPMoreScenarios(t *testing.T) {
 	})
 
 	t.Run("provider error returns 911", func(t *testing.T) {
+		originalProvider := config.GlobalConfig.Users[0].Provider
+		defer func() { config.GlobalConfig.Users[0].Provider = originalProvider }()
 		config.GlobalConfig.Users[0].Provider = "unknown"
 		req := httptest.NewRequest("GET", "/nic/update?hostname=test.example.com&myip=1.2.3.4", nil)
 		req.SetBasicAuth("user", "pass")

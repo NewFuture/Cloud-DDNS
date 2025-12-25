@@ -83,6 +83,8 @@ func TestDynDNSAuthAndValidation(t *testing.T) {
 	})
 
 	t.Run("system error provider failure", func(t *testing.T) {
+		originalProvider := config.GlobalConfig.Users[0].Provider
+		defer func() { config.GlobalConfig.Users[0].Provider = originalProvider }()
 		config.GlobalConfig.Users[0].Provider = "unknown"
 		req := httptest.NewRequest("GET", "/update?hostname=test.example.com&myip=1.2.3.4", nil)
 		req.SetBasicAuth("user", "pass")
