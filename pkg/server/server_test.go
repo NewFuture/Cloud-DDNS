@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/md5"
 	"fmt"
 	"log"
 	"net"
@@ -20,15 +19,12 @@ import (
 
 func TestComputeMD5Hash(t *testing.T) {
 	// Test MD5 hash computation used in GnuDIP protocol
-	user := "testuser"
 	salt := "12345.67890"
 	password := "testpass"
 
-	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
-
-	// Compute hash
-	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	// Client algorithm: md5( md5(password) + "." + salt )
+	expectedHash := mode.ComputeTCPHash(password, salt)
+	actualHash := mode.ComputeTCPHash(password, salt)
 
 	if actualHash != expectedHash {
 		t.Errorf("MD5 hash mismatch: expected %s, got %s", expectedHash, actualHash)
@@ -269,9 +265,7 @@ func TestAuthenticationFlow(t *testing.T) {
 	password := "testpass"
 	salt := "1234567890.9876543210"
 
-	// Compute expected hash
-	expectedStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-	expectedHash := fmt.Sprintf("%x", md5.Sum([]byte(expectedStr)))
+	expectedHash := mode.ComputeTCPHash(password, salt)
 
 	// Verify the user exists
 	userConfig := config.GetUser(user)
@@ -280,8 +274,7 @@ func TestAuthenticationFlow(t *testing.T) {
 	}
 
 	// Recompute hash to verify
-	actualStr := fmt.Sprintf("%s:%s:%s", user, salt, userConfig.Password)
-	actualHash := fmt.Sprintf("%x", md5.Sum([]byte(actualStr)))
+	actualHash := mode.ComputeTCPHash(password, salt)
 
 	if actualHash != expectedHash {
 		t.Errorf("Hash mismatch: expected %s, got %s", expectedHash, actualHash)
@@ -405,8 +398,7 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Compute hash
 		user := "testuser"
 		password := "testpass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		hash := mode.ComputeTCPHash(password, salt)
 
 		// Send request - note: this will fail because we don't have real provider setup
 		// But we're testing the protocol flow
@@ -446,8 +438,7 @@ func TestTCPServerIntegration(t *testing.T) {
 		}
 		salt = strings.TrimSpace(salt)
 
-		hashStr := fmt.Sprintf("%s:%s:%s", "debug", salt, "debug")
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		hash := mode.ComputeTCPHash("debug", salt)
 		request := fmt.Sprintf("%s:%s:debug.example.com:0:1.2.3.4\n", "debug", hash)
 		if _, err := conn.Write([]byte(request)); err != nil {
 			t.Fatalf("Failed to send request: %v", err)
@@ -480,8 +471,7 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Use wrong password
 		user := "testuser"
 		wrongPassword := "wrongpass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, wrongPassword)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		hash := mode.ComputeTCPHash(wrongPassword, salt)
 
 		request := fmt.Sprintf("%s:%s:test.example.com:0:1.2.3.4\n", user, hash)
 		if _, err := conn.Write([]byte(request)); err != nil {
@@ -516,8 +506,7 @@ func TestTCPServerIntegration(t *testing.T) {
 		// Use unknown user
 		user := "unknownuser"
 		password := "anypass"
-		hashStr := fmt.Sprintf("%s:%s:%s", user, salt, password)
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(hashStr)))
+		hash := mode.ComputeTCPHash(password, salt)
 
 		request := fmt.Sprintf("%s:%s:test.example.com:0:1.2.3.4\n", user, hash)
 		if _, err := conn.Write([]byte(request)); err != nil {
