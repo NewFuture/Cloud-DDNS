@@ -9,7 +9,7 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 )
 
-func TestEasyDNSHostIDParameter(t *testing.T) {
+func TestEasyDNSHostIDParameterWithProviderError(t *testing.T) {
 	originalConfig := config.GlobalConfig
 	defer func() { config.GlobalConfig = originalConfig }()
 
