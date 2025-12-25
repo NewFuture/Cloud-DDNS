@@ -131,7 +131,7 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 			}
 			return
 		}
-		salt := generateSalt(16)
+		salt := generateSalt(10)
 		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
 		body := fmt.Sprintf(`<html><head>
 <meta name="salt" content="%s">

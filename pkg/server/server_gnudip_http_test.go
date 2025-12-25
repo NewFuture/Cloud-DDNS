@@ -43,6 +43,10 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		if !strings.Contains(response, `<meta name="salt"`) || !strings.Contains(response, `<meta name="time"`) || !strings.Contains(response, `<meta name="sign"`) {
 			t.Fatalf("Expected GnuDIP challenge response with salt/time/sign, got '%s'", response)
 		}
+		salt := getMetaContent(response, "salt")
+		if len(salt) != 10 {
+			t.Fatalf("Expected salt length 10, got %d (%q)", len(salt), salt)
+		}
 	})
 
 	t.Run("GnuDIP HTTP handshake on CGI path without domain", func(t *testing.T) {
@@ -59,6 +63,10 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		response := w.Body.String()
 		if !strings.Contains(response, `<meta name="salt"`) || !strings.Contains(response, `<meta name="time"`) || !strings.Contains(response, `<meta name="sign"`) {
 			t.Fatalf("Expected GnuDIP challenge response, got '%s'", response)
+		}
+		salt := getMetaContent(response, "salt")
+		if len(salt) != 10 {
+			t.Fatalf("Expected salt length 10, got %d (%q)", len(salt), salt)
 		}
 		if !strings.Contains(response, `198.51.100.20`) {
 			t.Fatalf("Expected response to include client IP, got '%s'", response)
@@ -139,4 +147,19 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 			t.Fatalf("Expected numeric '0' or '1', got '%s'", response)
 		}
 	})
+
+}
+
+func getMetaContent(body, name string) string {
+	prefix := fmt.Sprintf(`<meta name="%s" content="`, name)
+	start := strings.Index(body, prefix)
+	if start == -1 {
+		return ""
+	}
+	start += len(prefix)
+	end := strings.Index(body[start:], `"`)
+	if end == -1 {
+		return ""
+	}
+	return body[start : start+end]
 }
