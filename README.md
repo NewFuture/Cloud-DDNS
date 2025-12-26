@@ -195,6 +195,7 @@ go build -o cloud-ddns main.go
 server:
   tcp_port: 3495   # GnuDIP standard port
   http_port: 8080  # HTTP compatible port
+  pass_through: false # Enable passthrough to use provider/account directly from requests
 
 users:
   # Aliyun user example
@@ -207,6 +208,8 @@ users:
     password: "TokenValue"      # Dnspod Token
     provider: "tencent"
 ```
+
+> Tip: When `pass_through` is set to `true`, you can skip pre-configured users and send credentials directly using `provider/accountId` as the username (e.g., `aliyun/AKID`) or by placing the provider in the HTTP host such as `aliyun.example.com`; the password should be the provider SecretKey.
 
 3. Run the service:
 ```bash

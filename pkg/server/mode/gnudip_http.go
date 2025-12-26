@@ -54,6 +54,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		IP:         resolvedIP,
 		Reqc:       reqc,
 		RemoteAddr: r.RemoteAddr,
+		Host:       r.Host,
 		Time:       timeParam,
 		Salt:       salt,
 		Sign:       sign,
