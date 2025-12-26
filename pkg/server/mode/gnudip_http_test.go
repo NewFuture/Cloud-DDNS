@@ -22,9 +22,10 @@ func TestGnuHTTPAllowsSaltWithoutSign(t *testing.T) {
 	}
 
 	salt := "Y7Bu3WOpEm"
+	const timeParam = "1766753435" // fixture timestamp from observed request
 	pass := ComputeTCPHash("debug", salt)
 
-	req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?salt="+salt+"&time=1766753435&sign=&user=debug&pass="+pass+"&domn=newfuture.lt&reqc=0&addr=1.2.3.4", nil)
+	req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?salt="+salt+"&time="+timeParam+"&sign=&user=debug&pass="+pass+"&domn=newfuture.lt&reqc=0&addr=1.2.3.4", nil)
 	mode := NewGnuHTTPMode(func(format string, args ...interface{}) {})
 
 	preparedReq, outcome := mode.Prepare(req)
