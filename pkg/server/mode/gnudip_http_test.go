@@ -37,7 +37,7 @@ func TestGnuHTTPAllowsSaltWithoutSign(t *testing.T) {
 	params.Set("addr", "1.2.3.4")
 
 	req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?"+params.Encode(), nil)
-	mode := NewGnuHTTPMode(func(format string, args ...interface{}) {}) // silence debug logging for test output
+	mode := NewGnuHTTPMode(t.Logf)
 
 	preparedReq, outcome := mode.Prepare(req)
 	if outcome != OutcomeSuccess {
