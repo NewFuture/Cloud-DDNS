@@ -147,18 +147,18 @@ func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outco
 	if req != nil && req.Password == "" && req.Sign == "" {
 		now := time.Now().Unix()
 		user := req.Username
-		u := config.GetUser(user)
-		if u == nil {
-			if _, err := w.Write([]byte("1")); err != nil {
-				log.Printf("HTTP Write Error: %v", err)
-			}
-			return
-		}
 		salt := generateSalt(10)
 		if salt == "" {
 			salt = fallbackSalt(10)
 		}
-		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
+
+		// Generate sign if user is known, otherwise use empty sign
+		sign := ""
+		u := config.GetUser(user)
+		if u != nil {
+			sign = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
+		}
+
 		body := fmt.Sprintf(`<html><head>
 <meta name="salt" content="%s">
 <meta name="time" content="%d">

@@ -191,7 +191,7 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 	})
 
-	t.Run("CGI path with no parameters returns auth failure", func(t *testing.T) {
+	t.Run("CGI path with no parameters returns challenge", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi", nil)
 		req.RemoteAddr = "198.51.100.30:5678"
 		w := httptest.NewRecorder()
@@ -202,9 +202,16 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 			t.Fatalf("Expected status 200, got %d", w.Code)
 		}
 
-		response := strings.TrimSpace(w.Body.String())
-		if response != "1" {
-			t.Fatalf("Expected auth failure '1' when no user provided, got '%s'", response)
+		response := w.Body.String()
+		// Should return challenge page with salt/time/sign/addr meta tags even without user
+		if !strings.Contains(response, `<meta name="salt"`) ||
+			!strings.Contains(response, `<meta name="time"`) ||
+			!strings.Contains(response, `<meta name="addr"`) {
+			t.Fatalf("Expected challenge response with salt/time/addr meta tags, got '%s'", response)
+		}
+		// sign might be empty if no user provided, so we check it's present but allow empty
+		if !strings.Contains(response, `<meta name="sign"`) {
+			t.Fatalf("Expected sign meta tag (even if empty), got '%s'", response)
 		}
 	})
 
