@@ -208,17 +208,17 @@ func providerFromHost(host string) string {
 	dotIdx := strings.Index(lowerHost, ".")
 	dashIdx := strings.Index(lowerHost, "-")
 
-	// Prefer the delimiter that appears first so both "provider.example.com" and "provider-ddns.example.com" work.
-	switch {
-	case dotIdx > 0 && dashIdx > 0:
-		if dotIdx < dashIdx {
-			return lowerHost[:dotIdx]
-		}
-		return lowerHost[:dashIdx]
-	case dotIdx > 0:
-		return lowerHost[:dotIdx]
-	case dashIdx > 0:
-		return lowerHost[:dashIdx]
+	// Use whichever delimiter (dot or dash) appears first to derive the provider prefix.
+	firstIdx := -1
+	if dotIdx > 0 {
+		firstIdx = dotIdx
+	}
+	if dashIdx > 0 && (firstIdx == -1 || dashIdx < firstIdx) {
+		firstIdx = dashIdx
+	}
+
+	if firstIdx > 0 {
+		return lowerHost[:firstIdx]
 	}
 
 	return ""
