@@ -88,7 +88,8 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
-	// Two-step: if Password is empty, defer auth to Respond (will issue challenge).
+	// Two-step flow: if no password provided (but user is valid), defer to Respond to issue challenge.
+	// Note: if sign is provided without password, this still returns AuthFailure (invalid auth attempt).
 	if req.Password == "" {
 		return OutcomeAuthFailure
 	}
@@ -141,7 +142,8 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 }
 
 func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) {
-	// If no password provided, issue challenge page.
+	// If no password provided (and user is valid), issue challenge page with salt/time/sign.
+	// This handles the first step of the two-step GnuDIP authentication flow.
 	if req != nil && req.Password == "" {
 		now := time.Now().Unix()
 		user := req.Username
