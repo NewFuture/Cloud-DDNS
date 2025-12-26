@@ -208,6 +208,7 @@ func providerFromHost(host string) string {
 	dotIdx := strings.Index(lowerHost, ".")
 	dashIdx := strings.Index(lowerHost, "-")
 
+	// Prefer the delimiter that appears first so both "provider.example.com" and "provider-ddns.example.com" work.
 	switch {
 	case dotIdx > 0 && dashIdx > 0:
 		if dotIdx < dashIdx {
