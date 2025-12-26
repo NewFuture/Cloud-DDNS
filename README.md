@@ -26,7 +26,7 @@
 | DynDNS / NIC / EasyDNS / Oray / DtDNS | `/`, `/update`, `/nic/update`, `/api/autodns.cfm` | Basic Auth 或 `user`/`pass`/`pw`       | 域名：`hostname/host/domn/domain/id`；IP：`myip/ip/addr`        | `good <ip>` / `badauth` / `notfqdn` / `911` |
 | GnuDIP HTTP                         | `/cgi-bin/gdipupdt.cgi`             | 两步：首请求返回 `time/sign`，二次 `md5(user:time:secret)` | `user/pass(sign)/domn/addr`；`reqc`=0/1/2；缺省 IP 用源地址    | 首次返回 meta；后续数字 `0/1/2` |
 | GnuDIP TCP                          | TCP 3495                            | MD5 challenge-response                 | 报文：`user:hash:domain:reqc:addr`                             | 数字 `0/1/2`                  |
-| Oray TCP（花生壳）                   | TCP 6060（可配置）                   | 明文认证（支持MD5/SHA256/Base64）       | 报文：`user:pass:hostname[:ip]`                                | `good <ip>` / `badauth` / `notfqdn` / `911` |
+| Oray TCP（花生壳）                   | TCP 80（可配置）                   | 明文认证（支持MD5/SHA256/Base64）       | 报文：`user:pass:hostname[:ip]`                                | `good <ip>` / `badauth` / `notfqdn` / `911` |
 
 更多协议兼容（与上表覆盖关系）：
 
@@ -34,7 +34,7 @@
 |---|---|---|---|---|---|
 | DynDNS（DynDNS2 / NIC Update 族 / DtDNS） | `/nic/update`（常见）；Oray 变体 `/ph/update`；3322 变体 `/dyndns/update`；DtDNS `/api/autodns.cfm` | HTTP Basic Auth 或 URL 内嵌 `user:pass/pw` | `hostname/id/host/domain/domn`=FQDN（部分支持逗号多值）；`myip/ip`=要设置 IP（可省略用源地址）；（3322 常见：`system`=更新系统类型） | `good <ip>` / `nochg <ip>` / `badauth` / `nohost` / `badagent` / `dnserr` / `911`（服务商略有差异） | DynDNS、No‑IP、DNS‑O‑Matic、Oray、3322(qDNS)、DtDNS |
 | easyDNS（脚本端点） | `/dyn/tomato.php`，`/dyn/generic.php` | Query 凭据：`username`、`password` | `username`=账号；`password`=token；`hostname`=主机名；`myip`=IP | 兼容 DynDNS 响应 | easyDNS |
-| Oray TCP（花生壳） | TCP 6060（可配置） | 明文密码或哈希 | `username:password:hostname[:ip]` | `good <ip>` / `badauth` / `notfqdn` / `911` | 支持 IPv4/IPv6 |
+| Oray TCP（花生壳） | TCP 80（可配置） | 明文密码或哈希 | `username:password:hostname[:ip]` | `good <ip>` / `badauth` / `notfqdn` / `911` | 支持 IPv4/IPv6 |
 
 **常用参数别名（不区分大小写）：**
 - 用户：`user`,`username`,`usr`,`name` 或 Basic Auth
@@ -48,7 +48,7 @@
 
 #### 方式一：Docker（推荐）
 ```bash
-docker run -d -p 3495:3495 -p 6060:6060 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
+docker run -d -p 3495:3495 -p 80:80 -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml:ro --name cloud-ddns cloud-ddns:latest
 ```
 
 #### 方式二：二进制运行
@@ -64,7 +64,7 @@ docker run -d -p 3495:3495 -p 6060:6060 -p 8080:8080 -v $(pwd)/config.yaml:/app/
 server:
   tcp_port: 3495       # GnuDIP TCP 标准端口
   http_port: 8080      # HTTP 兼容端口
-  oray_tcp_port: 6060  # Oray TCP 端口（可选，0 表示禁用）
+  oray_tcp_port: 80  # Oray TCP 端口（可选，0 表示禁用）
 
 users:
   # 阿里云用户示例
@@ -86,7 +86,7 @@ users:
 |--------|-----|
 | **服务商** | GnuDIP 或 Custom |
 | **服务器地址** | 您部署 Cloud-DDNS 的服务器 IP/域名 |
-| **端口** | 3495 (GnuDIP TCP)、6060 (Oray TCP) 或 8080 (HTTP） |
+| **端口** | 3495 (GnuDIP TCP)、80 (Oray TCP) 或 8080 (HTTP） |
 | **用户名** | 云厂商 AccessKey ID |
 | **密码** | 云厂商 AccessKey Secret |
 | **域名** | 完整域名，如 `camera.example.com` |
@@ -101,13 +101,13 @@ username:password:hostname[:ip]
 **示例：**
 ```bash
 # 使用 netcat 测试 Oray TCP 协议
-echo "your_access_key:your_secret_key:test.example.com:1.2.3.4" | nc your-server 6060
+echo "your_access_key:your_secret_key:test.example.com:1.2.3.4" | nc your-server 80
 
 # 省略 IP 自动检测客户端地址
-echo "your_access_key:your_secret_key:test.example.com" | nc your-server 6060
+echo "your_access_key:your_secret_key:test.example.com" | nc your-server 80
 
 # IPv6 地址支持
-echo "your_access_key:your_secret_key:test.example.com:2001:db8::1" | nc your-server 6060
+echo "your_access_key:your_secret_key:test.example.com:2001:db8::1" | nc your-server 80
 ```
 
 **响应代码：**

@@ -14,7 +14,7 @@ type Config struct {
 type ServerConfig struct {
 	TCPPort     int `yaml:"tcp_port"`
 	HTTPPort    int `yaml:"http_port"`
-	OrayTCPPort int `yaml:"oray_tcp_port"` // Oray TCP protocol port (default: 6060)
+	OrayTCPPort int `yaml:"oray_tcp_port"` // Oray TCP protocol port (default: 80)
 }
 
 type UserConfig struct {
