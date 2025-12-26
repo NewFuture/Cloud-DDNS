@@ -85,6 +85,7 @@ func (m *DynMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
+	// In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them.
 	if !passthrough && !verifyPassword(u.Password, req.Password) {
 		log.Printf("Authentication failed for user: %q", req.Username)
 		m.debugLogf("DDNS mode authentication failed for user=%s", req.Username)
@@ -196,6 +197,7 @@ func providerFromUsername(username string) (string, string) {
 	return "", ""
 }
 
+// providerFromHost extracts provider prefix from hosts like "aliyun.example.com" or "tencent-ddns.example.com".
 func providerFromHost(host string) string {
 	host = normalizeHost(host)
 	if host == "" {
@@ -232,10 +234,6 @@ func normalizeHost(host string) string {
 }
 
 func isSupportedProvider(providerName string) bool {
-	switch strings.ToLower(providerName) {
-	case "aliyun", "tencent":
-		return true
-	default:
-		return false
-	}
+	_, err := provider.GetProvider(&config.UserConfig{Provider: strings.ToLower(providerName)})
+	return err == nil
 }
