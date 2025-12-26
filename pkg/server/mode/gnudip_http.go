@@ -95,7 +95,8 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 	}
 
 	if req.Salt != "" {
-		if (req.Sign != "" && req.Time == "") || (req.Sign == "" && req.Time != "") {
+		// Salt-based authentication may omit sign entirely; only enforce time when sign is present.
+		if req.Sign != "" && req.Time == "" {
 			return OutcomeAuthFailure
 		}
 		if req.Sign != "" {
