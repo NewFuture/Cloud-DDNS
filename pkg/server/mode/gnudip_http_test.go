@@ -2,6 +2,7 @@ package mode
 
 import (
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
@@ -22,10 +23,20 @@ func TestGnuHTTPAllowsSaltWithoutSign(t *testing.T) {
 	}
 
 	salt := "Y7Bu3WOpEm"
-	const fixtureTimeParam = "1766753435" // fixture timestamp from observed request
+	const observedFailureTimeParam = "1766753435" // timestamp captured from reported failure case
 	pass := ComputeTCPHash("debug", salt)
 
-	req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?salt="+salt+"&time="+fixtureTimeParam+"&sign=&user=debug&pass="+pass+"&domn=newfuture.lt&reqc=0&addr=1.2.3.4", nil)
+	params := url.Values{}
+	params.Set("salt", salt)
+	params.Set("time", observedFailureTimeParam)
+	params.Set("sign", "")
+	params.Set("user", "debug")
+	params.Set("pass", pass)
+	params.Set("domn", "newfuture.lt")
+	params.Set("reqc", "0")
+	params.Set("addr", "1.2.3.4")
+
+	req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?"+params.Encode(), nil)
 	mode := NewGnuHTTPMode(func(format string, args ...interface{}) {})
 
 	preparedReq, outcome := mode.Prepare(req)
