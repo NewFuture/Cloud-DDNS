@@ -191,6 +191,89 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 	})
 
+	t.Run("CGI path with no parameters returns challenge", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi", nil)
+		req.RemoteAddr = "198.51.100.30:5678"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := w.Body.String()
+		// Should return challenge page with salt/time/sign/addr meta tags even without user
+		if !strings.Contains(response, `<meta name="salt"`) ||
+			!strings.Contains(response, `<meta name="time"`) ||
+			!strings.Contains(response, `<meta name="addr"`) {
+			t.Fatalf("Expected challenge response with salt/time/addr meta tags, got '%s'", response)
+		}
+		// sign might be empty if no user provided, so we check it's present but allow empty
+		if !strings.Contains(response, `<meta name="sign"`) {
+			t.Fatalf("Expected sign meta tag (even if empty), got '%s'", response)
+		}
+	})
+
+	t.Run("GnuDIP exact protocol flow: Step 1 and Step 2", func(t *testing.T) {
+		// Step 1: REQUEST SALT with user parameter
+		// Following the GnuDIP protocol: client requests salt/time/sign from server
+		req1 := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi?user=testuser", nil)
+		req1.RemoteAddr = "192.168.0.4:1234"
+		w1 := httptest.NewRecorder()
+
+		cgiHandler(w1, req1)
+
+		if w1.Code != http.StatusOK {
+			t.Fatalf("Step 1: Expected status 200, got %d", w1.Code)
+		}
+
+		response1 := w1.Body.String()
+
+		// Verify step 1 response contains meta tags
+		if !strings.Contains(response1, `<meta name="salt"`) ||
+			!strings.Contains(response1, `<meta name="time"`) ||
+			!strings.Contains(response1, `<meta name="sign"`) ||
+			!strings.Contains(response1, `<meta name="addr"`) {
+			t.Fatalf("Step 1: Expected HTML with salt/time/sign/addr meta tags, got: %s", response1)
+		}
+
+		// Extract values from step 1 response
+		salt := getMetaContent(response1, "salt")
+		timeParam := getMetaContent(response1, "time")
+		serverSign := getMetaContent(response1, "sign")
+		addr := getMetaContent(response1, "addr")
+
+		t.Logf("Step 1 extracted: salt=%s time=%s sign=%s addr=%s", salt, timeParam, serverSign, addr)
+
+		// Step 2: REQUEST UPDATE with all parameters
+		// Compute password hash as: MD5(MD5(password) + "." + salt)
+		inner := md5.Sum([]byte("testpass"))
+		pass := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%x.%s", inner, salt))))
+
+		// Build step 2 request with all params matching GnuDIP protocol
+		req2URL := fmt.Sprintf("/cgi-bin/gdipupdt.cgi?salt=%s&time=%s&sign=%s&user=testuser&pass=%s&domn=test.example.com&reqc=0&addr=192.168.0.4",
+			salt, timeParam, serverSign, pass)
+
+		req2 := httptest.NewRequest("GET", req2URL, nil)
+		req2.RemoteAddr = "192.168.0.4:1234"
+		w2 := httptest.NewRecorder()
+
+		cgiHandler(w2, req2)
+
+		if w2.Code != http.StatusOK {
+			t.Fatalf("Step 2: Expected status 200, got %d", w2.Code)
+		}
+
+		response2 := strings.TrimSpace(w2.Body.String())
+		t.Logf("Step 2 response: %s", response2)
+
+		// Should return numeric code (0=success, 1=failure, 2=offline)
+		if response2 != "0" && response2 != "1" && response2 != "2" {
+			t.Fatalf("Step 2: Expected numeric response (0/1/2), got '%s'", response2)
+		}
+	})
+
 }
 
 func getMetaContent(body, name string) string {

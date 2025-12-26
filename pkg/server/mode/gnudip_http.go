@@ -37,8 +37,8 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	timeParam := GetQueryParam(q, "time")
 	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
-	authPresent := headerPass != "" || q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
-	isHandshake := !authPresent && user != ""
+	// Check if any form of authentication is present (not just password)
+	authPresent := pass != "" || sign != ""
 
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
@@ -59,7 +59,9 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Sign:       sign,
 	}
 
-	if !isHandshake {
+	// Skip domain validation when no authentication is present (handshake scenario)
+	// The Respond method will issue a challenge page in this case
+	if authPresent {
 		if domain == "" || len(domain) < 3 || len(domain) > 253 {
 			log.Printf("Invalid domain: %q", domain)
 			return req, OutcomeInvalidDomain
@@ -67,7 +69,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	}
 
 	logMsg := "GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s"
-	if isHandshake {
+	if !authPresent {
 		logMsg = "GnuHTTP handshake prepare user=%s domain=%s ip=%s time=%s remote=%s"
 	}
 	m.debugLogf(logMsg, user, domain, resolvedIP, timeParam, r.RemoteAddr)
@@ -86,8 +88,9 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
-	// Two-step: if Password is empty, defer auth to Respond (will issue challenge).
-	if req.Password == "" {
+	// Two-step flow: if no authentication provided (password and sign both empty), defer to Respond to issue challenge.
+	// If sign is present without password, validation will fail because computing expected hash requires password.
+	if req.Password == "" && req.Sign == "" {
 		return OutcomeAuthFailure
 	}
 
@@ -139,22 +142,23 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 }
 
 func (m *GnuHTTPMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) {
-	// If no password provided, issue challenge page.
-	if req != nil && req.Password == "" {
+	// If no authentication provided (password and sign both empty), issue challenge page.
+	// This handles the first step of the two-step GnuDIP authentication flow.
+	if req != nil && req.Password == "" && req.Sign == "" {
 		now := time.Now().Unix()
 		user := req.Username
-		u := config.GetUser(user)
-		if u == nil {
-			if _, err := w.Write([]byte("1")); err != nil {
-				log.Printf("HTTP Write Error: %v", err)
-			}
-			return
-		}
 		salt := generateSalt(10)
 		if salt == "" {
 			salt = fallbackSalt(10)
 		}
-		sign := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
+
+		// Generate sign if user is known, otherwise use empty sign
+		sign := ""
+		u := config.GetUser(user)
+		if u != nil {
+			sign = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s:%d:%s", user, now, u.Password))))
+		}
+
 		body := fmt.Sprintf(`<html><head>
 <meta name="salt" content="%s">
 <meta name="time" content="%d">
