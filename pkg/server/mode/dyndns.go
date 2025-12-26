@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
@@ -85,7 +86,8 @@ func (m *DynMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
-	// In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them.
+	// In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them,
+	// so deployers should ensure network-level access control if they enable it.
 	if !passthrough && !verifyPassword(u.Password, req.Password) {
 		log.Printf("Authentication failed for user: %q", req.Username)
 		m.debugLogf("DDNS mode authentication failed for user=%s", req.Username)
@@ -160,6 +162,8 @@ func (m *DynMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) 
 	}
 }
 
+var supportedProvidersCache sync.Map
+
 func buildPassThroughUser(req *Request) *config.UserConfig {
 	providerName, account := detectProviderAndAccount(req.Username, req.Host)
 	if providerName == "" || account == "" || req.Password == "" {
@@ -205,18 +209,7 @@ func providerFromHost(host string) string {
 	}
 
 	lowerHost := strings.ToLower(host)
-	dotIdx := strings.Index(lowerHost, ".")
-	dashIdx := strings.Index(lowerHost, "-")
-
-	// Use whichever delimiter (dot or dash) appears first to derive the provider prefix.
-	firstIdx := -1
-	if dotIdx > 0 {
-		firstIdx = dotIdx
-	}
-	if dashIdx > 0 && (firstIdx == -1 || dashIdx < firstIdx) {
-		firstIdx = dashIdx
-	}
-
+	firstIdx := strings.IndexAny(lowerHost, ".-")
 	if firstIdx > 0 {
 		return lowerHost[:firstIdx]
 	}
@@ -235,6 +228,14 @@ func normalizeHost(host string) string {
 }
 
 func isSupportedProvider(providerName string) bool {
-	_, err := provider.GetProvider(&config.UserConfig{Provider: strings.ToLower(providerName)})
-	return err == nil
+	name := strings.ToLower(providerName)
+	if cached, ok := supportedProvidersCache.Load(name); ok {
+		if supported, ok := cached.(bool); ok {
+			return supported
+		}
+	}
+	_, err := provider.GetProvider(&config.UserConfig{Provider: name})
+	supported := err == nil
+	supportedProvidersCache.Store(name, supported)
+	return supported
 }
