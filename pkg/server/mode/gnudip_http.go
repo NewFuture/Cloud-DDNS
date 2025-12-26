@@ -95,7 +95,7 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 	}
 
 	if req.Salt != "" {
-		if (req.Sign != "" && req.Time == "") || (req.Sign == "" && req.Time != "") {
+		if req.Sign != "" && req.Time == "" {
 			return OutcomeAuthFailure
 		}
 		if req.Sign != "" {
