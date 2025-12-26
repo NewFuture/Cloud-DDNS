@@ -23,13 +23,25 @@ func main() {
 	server.SetDebug(*debug)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
 
+	// Start GnuDIP TCP server
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		server.StartTCP(config.GlobalConfig.Server.TCPPort)
 	}()
 
+	// Start Oray TCP server if port is configured
+	if config.GlobalConfig.Server.OrayTCPPort > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			server.StartOrayTCP(config.GlobalConfig.Server.OrayTCPPort)
+		}()
+	}
+
+	// Start HTTP server
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		server.StartHTTP(config.GlobalConfig.Server.HTTPPort)
