@@ -23,12 +23,12 @@ func TestGnuHTTPAllowsSaltWithoutSign(t *testing.T) {
 	}
 
 	salt := "Y7Bu3WOpEm"
-	const observedFailureTimeParam = "1766753435" // timestamp captured from reported failure case
+	const testTimeParam = "1700000000" // arbitrary timestamp for salt-based auth validation
 	pass := ComputeTCPHash("debug", salt)
 
 	params := url.Values{}
 	params.Set("salt", salt)
-	params.Set("time", observedFailureTimeParam)
+	params.Set("time", testTimeParam)
 	params.Set("sign", "")
 	params.Set("user", "debug")
 	params.Set("pass", pass)
