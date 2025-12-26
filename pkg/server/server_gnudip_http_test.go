@@ -191,6 +191,23 @@ func TestGnuDIPHTTPHandlers(t *testing.T) {
 		}
 	})
 
+	t.Run("CGI path with no parameters returns auth failure", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/cgi-bin/gdipupdt.cgi", nil)
+		req.RemoteAddr = "198.51.100.30:5678"
+		w := httptest.NewRecorder()
+
+		cgiHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", w.Code)
+		}
+
+		response := strings.TrimSpace(w.Body.String())
+		if response != "1" {
+			t.Fatalf("Expected auth failure '1' when no user provided, got '%s'", response)
+		}
+	})
+
 }
 
 func getMetaContent(body, name string) string {

@@ -37,8 +37,6 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	timeParam := GetQueryParam(q, "time")
 	salt := GetQueryParam(q, "salt")
 	ip := GetQueryParam(q, "addr", "myip", "ip")
-	authPresent := headerPass != "" || q.Has("pass") || q.Has("password") || q.Has("pwd") || q.Has("sign")
-	isHandshake := !authPresent && user != ""
 
 	reqc := 0
 	resolvedIP, err := resolveRequestIP(reqc, ip, r.RemoteAddr)
@@ -59,7 +57,9 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		Sign:       sign,
 	}
 
-	if !isHandshake {
+	// Skip domain validation when password is empty (handshake scenario)
+	// The Respond method will issue a challenge page in this case
+	if pass != "" {
 		if domain == "" || len(domain) < 3 || len(domain) > 253 {
 			log.Printf("Invalid domain: %q", domain)
 			return req, OutcomeInvalidDomain
@@ -67,7 +67,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 	}
 
 	logMsg := "GnuHTTP prepare user=%s domain=%s ip=%s time=%s remote=%s"
-	if isHandshake {
+	if pass == "" {
 		logMsg = "GnuHTTP handshake prepare user=%s domain=%s ip=%s time=%s remote=%s"
 	}
 	m.debugLogf(logMsg, user, domain, resolvedIP, timeParam, r.RemoteAddr)
