@@ -89,7 +89,7 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 	}
 
 	// Two-step flow: if no authentication provided (password and sign both empty), defer to Respond to issue challenge.
-	// If password is empty but sign is present, continue to validate sign (will fail if password doesn't match).
+	// If sign is present without password, validation will fail because computing expected hash requires password.
 	if req.Password == "" && req.Sign == "" {
 		return OutcomeAuthFailure
 	}
