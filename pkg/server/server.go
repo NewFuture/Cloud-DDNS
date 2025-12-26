@@ -67,10 +67,6 @@ func StartTCP(port int) {
 
 // StartOrayTCP starts the Oray TCP listener.
 func StartOrayTCP(port int) {
-	if port == 0 {
-		// Oray TCP is optional, skip if port not configured
-		return
-	}
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Oray TCP Listen Error: %v", err)
