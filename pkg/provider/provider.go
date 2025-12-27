@@ -76,6 +76,10 @@ func ParseDomain(fullDomain string) (baseDomain, subDomain string, err error) {
 
 // IsSupportedProvider returns true if a provider name is recognized.
 func IsSupportedProvider(name string) bool {
-	_, err := GetProvider(&config.UserConfig{Provider: strings.ToLower(name), Username: "_", Password: "_"})
-	return err == nil
+	switch strings.ToLower(name) {
+	case "aliyun", "tencent":
+		return true
+	default:
+		return false
+	}
 }

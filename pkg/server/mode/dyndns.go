@@ -167,10 +167,7 @@ var supportedProvidersCache sync.Map
 
 // ClearSupportedProvidersCache removes all cached provider support entries.
 func ClearSupportedProvidersCache() {
-	supportedProvidersCache.Range(func(key, _ any) bool {
-		supportedProvidersCache.Delete(key)
-		return true
-	})
+	supportedProvidersCache = sync.Map{}
 }
 
 func buildPassThroughUser(req *Request) *config.UserConfig {
@@ -204,6 +201,7 @@ func detectProviderAndAccount(username, host string) (string, string) {
 
 func providerFromUsername(username string) (string, string) {
 	parts := strings.SplitN(username, "/", 2)
+	// Account IDs containing additional "/" are rejected to keep parsing deterministic.
 	if len(parts) == 2 && parts[0] != "" && parts[1] != "" && !strings.Contains(parts[1], "/") {
 		name := strings.ToLower(parts[0])
 		if !isKnownProviderName(name) {
