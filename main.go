@@ -20,6 +20,10 @@ func main() {
 		log.Fatalf("Config Load Error: %v", err)
 	}
 
+	if config.GlobalConfig.Server.PassThrough {
+		log.Printf("WARNING: pass_through mode enabled - credentials will be forwarded without local verification; restrict access (VPN/IP allowlists/internal network).")
+	}
+
 	server.SetDebug(*debug)
 
 	var wg sync.WaitGroup

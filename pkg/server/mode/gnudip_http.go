@@ -54,6 +54,7 @@ func (m *GnuHTTPMode) Prepare(r *http.Request) (*Request, Outcome) {
 		IP:         resolvedIP,
 		Reqc:       reqc,
 		RemoteAddr: r.RemoteAddr,
+		Host:       r.Host,
 		Time:       timeParam,
 		Salt:       salt,
 		Sign:       sign,
@@ -83,6 +84,15 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 	}
 
 	u := config.GetUser(req.Username)
+	passthrough := false
+	if u == nil && config.GlobalConfig.Server.PassThrough {
+		if ptUser := buildPassThroughUser(req); ptUser != nil {
+			u = ptUser
+			passthrough = true
+			m.debugLogf("GnuHTTP passthrough enabled for provider=%s account=%s host=%s", ptUser.Provider, ptUser.Username, req.Host)
+		}
+	}
+
 	if u == nil {
 		log.Printf("Authentication failed for user: %q", req.Username)
 		return OutcomeAuthFailure
@@ -90,11 +100,16 @@ func (m *GnuHTTPMode) Process(req *Request) Outcome {
 
 	// Two-step flow: if no authentication provided (password and sign both empty), defer to Respond to issue challenge.
 	// If sign is present without password, validation will fail because computing expected hash requires password.
-	if req.Password == "" && req.Sign == "" {
+	if req.Password == "" && req.Sign == "" && !passthrough {
 		return OutcomeAuthFailure
 	}
 
-	if req.Salt != "" {
+	if passthrough {
+		// WARNING: passthrough trusts upstream provider to validate credentials; ensure deployment controls access.
+		if req.Password == "" {
+			return OutcomeAuthFailure
+		}
+	} else if req.Salt != "" {
 		// Salt-based authentication may omit sign entirely; only enforce time when sign is present.
 		if req.Sign != "" && req.Time == "" {
 			return OutcomeAuthFailure

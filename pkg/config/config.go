@@ -12,8 +12,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	TCPPort  int `yaml:"tcp_port"`
-	HTTPPort int `yaml:"http_port"`
+	TCPPort     int  `yaml:"tcp_port"`
+	HTTPPort    int  `yaml:"http_port"`
+	PassThrough bool `yaml:"pass_through"`
 }
 
 type UserConfig struct {

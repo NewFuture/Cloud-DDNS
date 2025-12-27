@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 	"github.com/NewFuture/CloudDDNS/pkg/provider"
@@ -53,6 +55,7 @@ func (m *DynMode) Prepare(r *http.Request) (*Request, Outcome) {
 		IP:         resolvedIP,
 		Reqc:       reqc,
 		RemoteAddr: r.RemoteAddr,
+		Host:       r.Host,
 	}
 
 	m.debugLogf("Credential source basicAuth=%t headerProvided=%t queryProvided=%t", basicAuthProvided, headerUser != "", queryUser != "")
@@ -68,7 +71,24 @@ func (m *DynMode) Process(req *Request) Outcome {
 	}
 
 	u := config.GetUser(req.Username)
-	if u == nil || !verifyPassword(u.Password, req.Password) {
+	passthrough := false
+	if u == nil && config.GlobalConfig.Server.PassThrough {
+		if ptUser := buildPassThroughUser(req); ptUser != nil {
+			u = ptUser
+			passthrough = true
+			m.debugLogf("DDNS passthrough enabled for provider=%s account=%s host=%s", ptUser.Provider, ptUser.Username, req.Host)
+		}
+	}
+
+	if u == nil {
+		log.Printf("Authentication failed for user: %q", req.Username)
+		m.debugLogf("DDNS mode authentication failed for user=%s", req.Username)
+		return OutcomeAuthFailure
+	}
+
+	// WARNING: In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them,
+	// so deployers should restrict exposure (e.g., IP allowlists, VPN, or internal-only access) if they enable it.
+	if !passthrough && !verifyPassword(u.Password, req.Password) {
 		log.Printf("Authentication failed for user: %q", req.Username)
 		m.debugLogf("DDNS mode authentication failed for user=%s", req.Username)
 		return OutcomeAuthFailure
@@ -140,4 +160,92 @@ func (m *DynMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) 
 	if _, err := w.Write([]byte(body)); err != nil {
 		log.Printf("HTTP Write Error: %v", err)
 	}
+}
+
+// supportedProvidersCache caches provider support checks across requests; clear via ClearSupportedProvidersCache if provider list changes.
+var supportedProvidersCache sync.Map
+
+// ClearSupportedProvidersCache removes all cached provider support entries.
+func ClearSupportedProvidersCache() {
+	supportedProvidersCache = sync.Map{}
+}
+
+func buildPassThroughUser(req *Request) *config.UserConfig {
+	providerName, account := detectProviderAndAccount(req.Username, req.Host)
+	if providerName == "" || account == "" || req.Password == "" {
+		return nil
+	}
+
+	if !isSupportedProvider(providerName) {
+		return nil
+	}
+
+	return &config.UserConfig{
+		Username: account,
+		Password: req.Password,
+		Provider: providerName,
+	}
+}
+
+func detectProviderAndAccount(username, host string) (string, string) {
+	if providerName, account := providerFromUsername(username); providerName != "" && account != "" {
+		return providerName, account
+	}
+
+	if providerName := providerFromHost(host); providerName != "" && username != "" {
+		return providerName, username
+	}
+
+	return "", ""
+}
+
+func providerFromUsername(username string) (string, string) {
+	if strings.Count(username, "/") != 1 {
+		return "", ""
+	}
+	parts := strings.SplitN(username, "/", 2)
+	name := strings.ToLower(parts[0])
+	if parts[0] == "" || parts[1] == "" || !provider.IsSupportedProvider(name) {
+		return "", ""
+	}
+	return name, parts[1]
+}
+
+// providerFromHost extracts the provider prefix (for example, "aliyun") from hosts like "aliyun.example.com" or "tencent-ddns.example.com".
+func providerFromHost(host string) string {
+	host = normalizeHost(host)
+	if host == "" {
+		return ""
+	}
+
+	lowerHost := strings.ToLower(host)
+	firstIdx := strings.IndexAny(lowerHost, ".-")
+	if firstIdx > 0 {
+		prefix := lowerHost[:firstIdx]
+		if provider.IsSupportedProvider(prefix) {
+			return prefix
+		}
+	}
+
+	return ""
+}
+
+func normalizeHost(host string) string {
+	if host == "" {
+		return ""
+	}
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	return host
+}
+
+func isSupportedProvider(providerName string) bool {
+	name := strings.ToLower(providerName)
+	if cached, ok := supportedProvidersCache.Load(name); ok {
+		return cached.(bool)
+	}
+	supported := provider.IsSupportedProvider(name)
+	supportedProvidersCache.Store(name, supported)
+	return supported
 }

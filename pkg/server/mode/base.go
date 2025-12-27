@@ -43,6 +43,7 @@ type Request struct {
 	IP         string
 	Reqc       int
 	RemoteAddr string
+	Host       string
 	Time       string
 	// Salt is the cryptographic salt for GnuDIP authentication.
 	Salt string
