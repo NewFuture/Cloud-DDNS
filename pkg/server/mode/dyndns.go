@@ -86,7 +86,7 @@ func (m *DynMode) Process(req *Request) Outcome {
 		return OutcomeAuthFailure
 	}
 
-	// In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them,
+	// WARNING: In passthrough mode we trust the provider credentials in the request and let the upstream provider validate them,
 	// so deployers should restrict exposure (e.g., IP allowlists, VPN, or internal-only access) if they enable it.
 	if !passthrough && !verifyPassword(u.Password, req.Password) {
 		log.Printf("Authentication failed for user: %q", req.Username)
@@ -162,7 +162,16 @@ func (m *DynMode) Respond(w http.ResponseWriter, req *Request, outcome Outcome) 
 	}
 }
 
+// supportedProvidersCache caches provider support checks across requests; clear via ClearSupportedProvidersCache if provider list changes.
 var supportedProvidersCache sync.Map
+
+// ClearSupportedProvidersCache removes all cached provider support entries.
+func ClearSupportedProvidersCache() {
+	supportedProvidersCache.Range(func(key, _ any) bool {
+		supportedProvidersCache.Delete(key)
+		return true
+	})
+}
 
 func buildPassThroughUser(req *Request) *config.UserConfig {
 	providerName, account := detectProviderAndAccount(req.Username, req.Host)
@@ -195,8 +204,12 @@ func detectProviderAndAccount(username, host string) (string, string) {
 
 func providerFromUsername(username string) (string, string) {
 	parts := strings.SplitN(username, "/", 2)
-	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-		return strings.ToLower(parts[0]), parts[1]
+	if len(parts) == 2 && parts[0] != "" && parts[1] != "" && !strings.Contains(parts[1], "/") {
+		name := strings.ToLower(parts[0])
+		if !isKnownProviderName(name) {
+			return "", ""
+		}
+		return name, parts[1]
 	}
 	return "", ""
 }
@@ -211,7 +224,10 @@ func providerFromHost(host string) string {
 	lowerHost := strings.ToLower(host)
 	firstIdx := strings.IndexAny(lowerHost, ".-")
 	if firstIdx > 0 {
-		return lowerHost[:firstIdx]
+		prefix := lowerHost[:firstIdx]
+		if isKnownProviderName(prefix) {
+			return prefix
+		}
 	}
 
 	return ""
@@ -230,10 +246,21 @@ func normalizeHost(host string) string {
 func isSupportedProvider(providerName string) bool {
 	name := strings.ToLower(providerName)
 	if cached, ok := supportedProvidersCache.Load(name); ok {
-		return cached.(bool)
+		if supported, okTyped := cached.(bool); okTyped {
+			return supported
+		}
+		log.Printf("isSupportedProvider: cache entry for %q has unexpected type %T; recomputing", name, cached)
 	}
-	_, err := provider.GetProvider(&config.UserConfig{Provider: name})
-	supported := err == nil
+	supported := isKnownProviderName(name)
 	supportedProvidersCache.Store(name, supported)
 	return supported
+}
+
+func isKnownProviderName(name string) bool {
+	switch strings.ToLower(name) {
+	case "aliyun", "tencent":
+		return true
+	default:
+		return false
+	}
 }

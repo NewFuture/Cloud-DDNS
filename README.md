@@ -209,7 +209,7 @@ users:
     provider: "tencent"
 ```
 
-> Tip: When `pass_through` is set to `true`, you can skip pre-configured users and send credentials directly using `provider/accountId` as the username (e.g., `aliyun/AKID`) or by placing the provider in the HTTP host such as `aliyun.example.com`; the password should be the provider SecretKey.
+> Tip: When `pass_through` is set to `true`, you can skip pre-configured users and send credentials directly using `provider/accountId` as the username (e.g., `aliyun/AKID`) or by placing the provider in the HTTP host such as `aliyun.example.com`; the password should be the provider SecretKey. When both are present, the `provider/accountId` username form takes precedence over the host-based provider.
 
 3. Run the service:
 ```bash

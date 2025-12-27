@@ -1,12 +1,14 @@
 package mode
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 )
 
 func TestBuildPassThroughUser(t *testing.T) {
+	ClearSupportedProvidersCache()
 	tests := []struct {
 		name         string
 		req          Request
@@ -23,6 +25,15 @@ func TestBuildPassThroughUser(t *testing.T) {
 			wantAccount:  "account123",
 		},
 		{
+			name: "provider from username prefix case insensitive",
+			req: Request{
+				Username: "AliYun/account123",
+				Password: "secret",
+			},
+			wantProvider: "aliyun",
+			wantAccount:  "account123",
+		},
+		{
 			name: "provider from host prefix with dash",
 			req: Request{
 				Username: "account456",
@@ -31,6 +42,30 @@ func TestBuildPassThroughUser(t *testing.T) {
 			},
 			wantProvider: "tencent",
 			wantAccount:  "account456",
+		},
+		{
+			name: "provider from host prefix with port and dot",
+			req: Request{
+				Username: "account789",
+				Password: "secret",
+				Host:     "aliyun.example.com:9090",
+			},
+			wantProvider: "aliyun",
+			wantAccount:  "account789",
+		},
+		{
+			name: "multiple slashes ignored",
+			req: Request{
+				Username: "aliyun//account",
+				Password: "secret",
+			},
+		},
+		{
+			name: "empty provider with account",
+			req: Request{
+				Username: "/account",
+				Password: "secret",
+			},
 		},
 		{
 			name: "missing password not allowed",
@@ -71,7 +106,10 @@ func TestBuildPassThroughUser(t *testing.T) {
 
 func TestDynModeProcessPassThroughToggle(t *testing.T) {
 	original := config.GlobalConfig
-	defer func() { config.GlobalConfig = original }()
+	t.Cleanup(func() {
+		config.GlobalConfig = original
+		ClearSupportedProvidersCache()
+	})
 
 	config.GlobalConfig = config.Config{}
 	mode := NewDynMode(false, func(string, ...interface{}) {})
@@ -97,4 +135,18 @@ func TestDynModeProcessPassThroughToggle(t *testing.T) {
 	if outcome := mode.Process(req); outcome != OutcomeSystemError {
 		t.Fatalf("expected host-based passthrough to reach provider call, got %v", outcome)
 	}
+
+	// concurrent cache access should be safe
+	ClearSupportedProvidersCache()
+	config.GlobalConfig.Server.PassThrough = true
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = isSupportedProvider("aliyun")
+			buildPassThroughUser(&Request{Username: "tencent/id", Password: "secret"})
+		}()
+	}
+	wg.Wait()
 }
