@@ -246,10 +246,7 @@ func normalizeHost(host string) string {
 func isSupportedProvider(providerName string) bool {
 	name := strings.ToLower(providerName)
 	if cached, ok := supportedProvidersCache.Load(name); ok {
-		if supported, okTyped := cached.(bool); okTyped {
-			return supported
-		}
-		log.Printf("isSupportedProvider: cache entry for %q has unexpected type %T; recomputing", name, cached)
+		return cached.(bool)
 	}
 	supported := isKnownProviderName(name)
 	supportedProvidersCache.Store(name, supported)
@@ -257,10 +254,5 @@ func isSupportedProvider(providerName string) bool {
 }
 
 func isKnownProviderName(name string) bool {
-	switch strings.ToLower(name) {
-	case "aliyun", "tencent":
-		return true
-	default:
-		return false
-	}
+	return provider.IsSupportedProvider(name)
 }
