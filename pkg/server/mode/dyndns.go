@@ -200,16 +200,15 @@ func detectProviderAndAccount(username, host string) (string, string) {
 }
 
 func providerFromUsername(username string) (string, string) {
-	parts := strings.SplitN(username, "/", 2)
-	// Account IDs containing additional "/" are rejected to keep parsing deterministic.
-	if len(parts) == 2 && parts[0] != "" && parts[1] != "" && !strings.Contains(parts[1], "/") {
-		name := strings.ToLower(parts[0])
-		if !isKnownProviderName(name) {
-			return "", ""
-		}
-		return name, parts[1]
+	if strings.Count(username, "/") != 1 {
+		return "", ""
 	}
-	return "", ""
+	parts := strings.SplitN(username, "/", 2)
+	name := strings.ToLower(parts[0])
+	if parts[0] == "" || parts[1] == "" || !provider.IsSupportedProvider(name) {
+		return "", ""
+	}
+	return name, parts[1]
 }
 
 // providerFromHost extracts the provider prefix (for example, "aliyun") from hosts like "aliyun.example.com" or "tencent-ddns.example.com".
@@ -223,7 +222,7 @@ func providerFromHost(host string) string {
 	firstIdx := strings.IndexAny(lowerHost, ".-")
 	if firstIdx > 0 {
 		prefix := lowerHost[:firstIdx]
-		if isKnownProviderName(prefix) {
+		if provider.IsSupportedProvider(prefix) {
 			return prefix
 		}
 	}
@@ -246,11 +245,7 @@ func isSupportedProvider(providerName string) bool {
 	if cached, ok := supportedProvidersCache.Load(name); ok {
 		return cached.(bool)
 	}
-	supported := isKnownProviderName(name)
+	supported := provider.IsSupportedProvider(name)
 	supportedProvidersCache.Store(name, supported)
 	return supported
-}
-
-func isKnownProviderName(name string) bool {
-	return provider.IsSupportedProvider(name)
 }

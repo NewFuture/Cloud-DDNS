@@ -7,6 +7,11 @@ import (
 	"github.com/NewFuture/CloudDDNS/pkg/config"
 )
 
+var supportedProviderNames = map[string]struct{}{
+	"aliyun":  {},
+	"tencent": {},
+}
+
 // Provider 统一接口
 type Provider interface {
 	UpdateRecord(domain string, ip string) error
@@ -76,10 +81,6 @@ func ParseDomain(fullDomain string) (baseDomain, subDomain string, err error) {
 
 // IsSupportedProvider returns true if a provider name is recognized.
 func IsSupportedProvider(name string) bool {
-	switch strings.ToLower(name) {
-	case "aliyun", "tencent":
-		return true
-	default:
-		return false
-	}
+	_, ok := supportedProviderNames[strings.ToLower(name)]
+	return ok
 }
